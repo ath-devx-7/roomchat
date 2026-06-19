@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ room.name }} — RoomChat{% endblock %}
+
+{% block content %}
+<div class="room-container" id="room-page" data-room-code="{{ room.room_code }}" data-user-id="{{ user.id }}" data-username="{{ user.username }}">
+
+    <!-- Room Header -->
+    <div class="room-header" id="room-header">
+        <div class="room-header-info">
+            <h1 class="room-name" id="room-name">{{ room.name }}</h1>
+            <p class="room-description" id="room-description">{{ room.description }}</p>
+        </div>
+        <div class="room-header-meta">
+            <span class="room-code-badge" id="room-code-display" title="Click to copy room code" onclick="copyRoomCode()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                {{ room.room_code }}
+            </span>
+            <span class="room-capacity" id="room-capacity">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span id="active-count">0</span> / {{ room.capacity }}
+            </span>
+            <a href="{% url 'dashboard' %}" class="btn btn-sm btn-ghost" id="leave-room-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Leave
+            </a>
+        </div>
+    </div>
+
+    <div class="room-body">
+
+        <!-- Active Users Sidebar -->
+        <aside class="sidebar" id="active-users-sidebar">
+            <div class="sidebar-header">
+                <h2 class="sidebar-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Online
+                    <span class="badge" id="online-count-badge">0</span>
+                </h2>
+            </div>
+
+            <!-- Invite Friend Section -->
+            <div class="sidebar-section" id="invite-section">
+                <h3 class="sidebar-section-title">Invite Friend</h3>
+                <div class="invite-friend-list" id="invite-friend-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div class="sidebar-users" id="active-users-list">
+                <!-- Populated by WebSocket -->
+            </div>
+
+            <!-- Owner Controls -->
+            <div class="sidebar-section owner-controls" id="owner-controls" style="display:none;">
+                <h3 class="sidebar-section-title">Owner Controls</h3>
+                <button class="btn btn-sm btn-danger btn-full" id="delete-room-btn" onclick="deleteRoom()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Delete Room
+                </button>
+            </div>
+        </aside>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="chat-messages" id="chat-messages">
+                {% if not messages_history %}
+                <div class="chat-welcome" id="chat-welcome">
+                    <div class="chat-welcome-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </div>
+                    <h3>Welcome to {{ room.name }}</h3>
+                    <p>Messages will appear here as they are sent. You're starting with a clean slate!</p>
+                </div>
+                {% else %}
+                    {% for msg in messages_history %}
+                    <div class="message {% if msg.is_deleted %}message-deleted{% endif %}" id="message-{{ msg.id }}" data-message-id="{{ msg.id }}">
+                        <div class="avatar avatar-sm message-avatar">{{ msg.sender.username|first|upper }}</div>
+                        <div class="message-body">
+                            <div class="message-header">
+                                <span class="message-sender">{{ msg.sender.username }}</span>
+                                <span class="message-time" data-utc="{{ msg.created_at.isoformat }}">{{ msg.created_at|date:"Y-m-d H:i" }}</span>
+                                {% if msg.edited_at %}
+                                <span class="message-edited">(edited)</span>
+                                {% endif %}
+                            </div>
+                            {% if msg.reply_to %}
+                            <div class="message-reply-preview">
+                                <span class="reply-user">{{ msg.reply_to.sender.username }}</span>
+                                <span class="reply-text">
+                                    {% if msg.reply_to.is_deleted %}
+                                    This message was deleted.
+                                    {% else %}
+                                    {{ msg.reply_to.content|slice:":100" }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% endif %}
+                            <div class="message-content">
+                                {{ msg.content }}
+                            </div>
+                        </div>
+                        <div class="message-actions">
+                            {% if not msg.is_deleted %}
+                            <button class="message-action-btn btn-reply" onclick="setReplyTo({{ msg.id }}, '{{ msg.sender.username|escapejs }}', '{{ msg.content|escapejs }}')" title="Reply">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 17 4 12 9 7"></polyline>
+                                    <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+                                </svg>
+                            </button>
+                            {% if msg.sender == user %}
+                            <button class="message-action-btn btn-edit" onclick="setEditMessage({{ msg.id }}, '{{ msg.content|escapejs }}')" title="Edit">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="message-action-btn btn-delete" onclick="deleteMessage({{ msg.id }})" title="Delete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Reply Preview Bar -->
+            <div class="reply-bar" id="reply-bar" style="display:none;">
+                <div class="reply-bar-content">
+                    <span class="reply-bar-label">Replying to</span>
+                    <span class="reply-bar-user" id="reply-bar-user"></span>
+                    <span class="reply-bar-text" id="reply-bar-text"></span>
+                </div>
+                <button class="reply-bar-close" id="cancel-reply-btn" onclick="cancelReply()">×</button>
+            </div>
+
+            <!-- Edit Preview Bar -->
+            <div class="edit-bar" id="edit-bar" style="display:none;">
+                <div class="edit-bar-content">
+                    <span class="edit-bar-label">Editing message</span>
+                </div>
+                <button class="edit-bar-close" id="cancel-edit-btn" onclick="cancelEdit()">×</button>
+            </div>
+
+            <!-- Message Input -->
+            <div class="chat-input-container" id="chat-input-container">
+                <input type="text" id="message-input" class="chat-input" placeholder="Type a message..." autocomplete="off">
+                <button class="chat-send-btn" id="send-message-btn" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/room.js' %}"></script>
+{% endblock %}
