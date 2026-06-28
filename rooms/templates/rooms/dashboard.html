@@ -154,20 +154,20 @@
                         {% csrf_token %}
                         <div class="form-group">
                             <label class="form-label">Room Name</label>
-                            {{ create_form.name }}
+                            <input type="text" name="name" class="form-input" placeholder="Room Name" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Description</label>
-                            {{ create_form.description }}
+                            <textarea name="description" class="form-input" placeholder="Room Description (optional)" rows="3"></textarea>
                         </div>
                         <div class="form-row">
                             <div class="form-group form-group-half">
                                 <label class="form-label">Capacity</label>
-                                {{ create_form.capacity }}
+                                <input type="number" name="capacity" class="form-input" min="2" max="100" value="10">
                             </div>
                             <div class="form-group form-group-half">
                                 <label class="form-label">Password</label>
-                                {{ create_form.password }}
+                                <input type="password" name="password" class="form-input" placeholder="Leave blank for no password">
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-full" id="create-room-btn">
@@ -199,11 +199,11 @@
                         {% csrf_token %}
                         <div class="form-group">
                             <label class="form-label">Room Code</label>
-                            {{ join_form.room_code }}
+                            <input type="text" name="room_code" class="form-input" placeholder="e.g. ABC123" maxlength="6" style="text-transform: uppercase;" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Password</label>
-                            {{ join_form.password }}
+                            <input type="password" name="password" class="form-input" placeholder="Password (if required)">
                         </div>
                         <button type="submit" class="btn btn-accent btn-full" id="join-room-btn">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

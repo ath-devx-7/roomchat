@@ -6,7 +6,8 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.db.models import Q
 
-from .forms import RegisterForm, LoginForm
+import re
+
 from .models import Friendship
 
 
@@ -15,15 +16,47 @@ def register_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
 
+    errors = {}
+    username = ''
+    email = ''
+
     if request.method == 'POST':
-        form = RegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('dashboard')
-    else:
-        form = RegisterForm()
-    return render(request, 'accounts/register.html', {'form': form})
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+
+        if not username:
+            errors['username'] = 'Username is required.'
+        elif len(username) > 150:
+            errors['username'] = 'Username must be 150 characters or fewer.'
+        elif not re.match(r'^[\w.@+-]+$', username):
+            errors['username'] = 'Enter a valid username. This value may contain only letters, numbers, and @/./+/-/_ characters.'
+        elif User.objects.filter(username=username).exists():
+            errors['username'] = 'A user with that username already exists.'
+
+        if not email:
+            errors['email'] = 'Email is required.'
+        elif not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+            errors['email'] = 'Enter a valid email address.'
+
+        if not password:
+            errors['password'] = 'Password is required.'
+        elif len(password) < 8:
+            errors['password'] = 'Password must be at least 8 characters long.'
+
+        if not errors:
+            try:
+                user = User.objects.create_user(username=username, email=email, password=password)
+                login(request, user)
+                return redirect('dashboard')
+            except Exception as e:
+                errors['username'] = f'Error creating user: {str(e)}'
+
+    return render(request, 'accounts/register.html', {
+        'errors': errors,
+        'username': username,
+        'email': email,
+    })
 
 
 def login_view(request):
@@ -31,20 +64,31 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
 
+    errors = {}
+    username = ''
+
     if request.method == 'POST':
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+
+        if not username:
+            errors['username'] = 'Username is required.'
+        if not password:
+            errors['password'] = 'Password is required.'
+
+        if not errors:
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
                 return redirect('dashboard')
             else:
                 messages.error(request, 'Invalid username or password.')
-    else:
-        form = LoginForm()
-    return render(request, 'accounts/login.html', {'form': form})
+
+    return render(request, 'accounts/login.html', {
+        'errors': errors,
+        'username': username,
+    })
+
 
 
 def logout_view(request):
