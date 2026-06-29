@@ -5,10 +5,41 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import User
 from django.utils import timezone
+from pydantic import ValidationError, TypeAdapter, Field
+from typing import Union, Annotated
 
 from .models import Room, RoomMembership, RoomInvitation, Message
 from accounts.models import Friendship
 from django.db.models import Q
+from .schemas import (
+    WSIncomingMessage,
+    WSSendMessage,
+    WSEditMessage,
+    WSDeleteMessage,
+    WSReplyMessage,
+    WSKickUser,
+    WSTransferOwnership,
+    WSDeleteRoom,
+    WSSendRoomInvite,
+    WSAcceptRoomInvite,
+    WSRejectRoomInvite,
+    WSUserJoinedEvent,
+    WSUserLeftEvent,
+    WSMessageCreatedEvent,
+    WSMessageEditedEvent,
+    WSMessageDeletedEvent,
+    WSActiveUsersUpdatedEvent,
+    WSUserKickedEvent,
+    WSUserKickedBroadcastEvent,
+    WSOwnershipTransferredEvent,
+    WSRoomDeletedEvent,
+    WSRoomInfoEvent,
+    WSRoomInvitationReceivedEvent,
+    WSFriendRequestReceivedEvent,
+    WSInviteResponseEvent,
+    WSInviteSentEvent,
+    WSErrorEvent,
+)
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -49,11 +80,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Notify room
         await self.channel_layer.group_send(
             self.room_group_name,
-            {
-                'type': 'user_joined',
-                'username': self.user.username,
-                'user_id': self.user.id,
-            }
+            WSUserJoinedEvent(username=self.user.username, user_id=self.user.id).model_dump(mode='json')
         )
 
         # Send updated active users list
@@ -74,11 +101,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 # Notify room
                 await self.channel_layer.group_send(
                     self.room_group_name,
-                    {
-                        'type': 'user_left',
-                        'username': self.user.username,
-                        'user_id': self.user.id,
-                    }
+                    WSUserLeftEvent(username=self.user.username, user_id=self.user.id).model_dump(mode='json')
                 )
 
                 # Update active users
@@ -90,355 +113,219 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         """Route incoming WebSocket messages to appropriate handlers."""
         try:
-            data = json.loads(text_data)
-        except json.JSONDecodeError:
+            msg = TypeAdapter(WSIncomingMessage).validate_json(text_data)
+        except ValidationError as e:
+            # Send back validation error event
+            await self.send(text_data=WSErrorEvent(message=f"Validation error: {e}").model_dump_json())
+            return
+        except Exception:
             return
 
-        event_type = data.get('type')
         handlers = {
-            'send_message': self.handle_send_message,
-            'edit_message': self.handle_edit_message,
-            'delete_message': self.handle_delete_message,
-            'reply_message': self.handle_reply_message,
-            'kick_user': self.handle_kick_user,
-            'transfer_ownership': self.handle_transfer_ownership,
-            'delete_room': self.handle_delete_room,
-            'send_room_invite': self.handle_send_room_invite,
+            WSSendMessage: self.handle_send_message,
+            WSEditMessage: self.handle_edit_message,
+            WSDeleteMessage: self.handle_delete_message,
+            WSReplyMessage: self.handle_reply_message,
+            WSKickUser: self.handle_kick_user,
+            WSTransferOwnership: self.handle_transfer_ownership,
+            WSDeleteRoom: self.handle_delete_room,
+            WSSendRoomInvite: self.handle_send_room_invite,
         }
 
-        handler = handlers.get(event_type)
+        handler = handlers.get(type(msg))
         if handler:
-            await handler(data)
+            await handler(msg)
 
     # ─── Message Handlers 
 
-    async def handle_send_message(self, data):
-        content = data.get('content', '').strip()
-        if not content:
-            return
-
+    async def handle_send_message(self, msg: WSSendMessage):
         # save message in DB
-        message = await self.save_message(content)
+        message = await self.save_message(msg.content)
 
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'message_created',
-                'message_id': message.id,
-                'sender_id': self.user.id,
-                'sender_username': self.user.username,
-                'content': content,
-                'created_at': message.created_at.isoformat(),
-                'reply_to': None,
-            }
+        event = WSMessageCreatedEvent(
+            message_id=message.id,
+            sender_id=self.user.id,
+            sender_username=self.user.username,
+            content=msg.content,
+            created_at=message.created_at.isoformat(),
+            reply_to=None
         )
+        await self.channel_layer.group_send(self.room_group_name, event.model_dump(mode='json'))
 
-    async def handle_reply_message(self, data):
-        content = data.get('content', '').strip()
-        reply_to_id = data.get('reply_to_id')
-        if not content or not reply_to_id:
-            return
+    async def handle_reply_message(self, msg: WSReplyMessage):
+        reply_to_data = await self.get_message_preview(msg.reply_to_id)
+        message = await self.save_message(msg.content, reply_to_id=msg.reply_to_id)
 
-        reply_to_data = await self.get_message_preview(reply_to_id)
-        message = await self.save_message(content, reply_to_id=reply_to_id)
-
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'message_created',
-                'message_id': message.id,
-                'sender_id': self.user.id,
-                'sender_username': self.user.username,
-                'content': content,
-                'created_at': message.created_at.isoformat(),
-                'reply_to': reply_to_data,
-            }
+        event = WSMessageCreatedEvent(
+            message_id=message.id,
+            sender_id=self.user.id,
+            sender_username=self.user.username,
+            content=msg.content,
+            created_at=message.created_at.isoformat(),
+            reply_to=reply_to_data
         )
+        await self.channel_layer.group_send(self.room_group_name, event.model_dump(mode='json'))
 
-    async def handle_edit_message(self, data):
-        message_id = data.get('message_id')
-        new_content = data.get('content', '').strip()
-        if not message_id or not new_content:
-            return
-
-        success = await self.update_message(message_id, new_content)
+    async def handle_edit_message(self, msg: WSEditMessage):
+        success = await self.update_message(msg.message_id, msg.content)
         if not success:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'Cannot edit this message.',
-            }))
+            await self.send(text_data=WSErrorEvent(message='Cannot edit this message.').model_dump_json())
             return
 
         edited_at = timezone.now().isoformat()
 
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'message_edited',
-                'message_id': message_id,
-                'content': new_content,
-                'edited_at': edited_at,
-            }
+        event = WSMessageEditedEvent(
+            message_id=msg.message_id,
+            content=msg.content,
+            edited_at=edited_at
         )
+        await self.channel_layer.group_send(self.room_group_name, event.model_dump(mode='json'))
 
-    async def handle_delete_message(self, data):
-        message_id = data.get('message_id')
-        if not message_id:
-            return
-
-        success = await self.soft_delete_message(message_id)
+    async def handle_delete_message(self, msg: WSDeleteMessage):
+        success = await self.soft_delete_message(msg.message_id)
         if not success:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'Cannot delete this message.',
-            }))
+            await self.send(text_data=WSErrorEvent(message='Cannot delete this message.').model_dump_json())
             return
 
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'message_deleted',
-                'message_id': message_id,
-            }
-        )
+        event = WSMessageDeletedEvent(message_id=msg.message_id)
+        await self.channel_layer.group_send(self.room_group_name, event.model_dump(mode='json'))
 
     # ─── Owner Controls 
 
-    async def handle_kick_user(self, data):
-        target_user_id = data.get('user_id')
-        if not target_user_id:
-            return
-
+    async def handle_kick_user(self, msg: WSKickUser):
         is_owner = await self.check_is_owner()
         if not is_owner:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'Only the room owner can kick users.',
-            }))
+            await self.send(text_data=WSErrorEvent(message='Only the room owner can kick users.').model_dump_json())
             return
 
         # Cannot kick yourself
-        if target_user_id == self.user.id:
+        if msg.user_id == self.user.id:
             return
 
-        target_username = await self.get_username(target_user_id)
-        target_channel = await self.get_member_channel(target_user_id)
+        target_username = await self.get_username(msg.user_id)
+        target_channel = await self.get_member_channel(msg.user_id)
 
         # Remove membership
-        await self.remove_membership(target_user_id)
+        await self.remove_membership(msg.user_id)
 
         # Notify the kicked user specifically
         if target_channel:
             await self.channel_layer.send(
                 target_channel,
-                {
-                    'type': 'user_kicked',
-                    'message': 'You have been kicked from the room.',
-                }
+                WSUserKickedEvent(message='You have been kicked from the room.').model_dump(mode='json')
             )
 
         # Notify everyone
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'user_kicked_broadcast',
-                'user_id': target_user_id,
-                'username': target_username,
-            }
-        )
+        event = WSUserKickedBroadcastEvent(user_id=msg.user_id, username=target_username)
+        await self.channel_layer.group_send(self.room_group_name, event.model_dump(mode='json'))
 
         await self.send_active_users()
 
-    async def handle_transfer_ownership(self, data):
-        target_user_id = data.get('user_id')
-        if not target_user_id:
-            return
-
+    async def handle_transfer_ownership(self, msg: WSTransferOwnership):
         is_owner = await self.check_is_owner()
         if not is_owner:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'Only the room owner can transfer ownership.',
-            }))
+            await self.send(text_data=WSErrorEvent(message='Only the room owner can transfer ownership.').model_dump_json())
             return
 
-        target_username = await self.transfer_room_ownership(target_user_id)
+        target_username = await self.transfer_room_ownership(msg.user_id)
         if not target_username:
             return
 
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'ownership_transferred',
-                'new_owner_id': target_user_id,
-                'new_owner_username': target_username,
-            }
-        )
+        event = WSOwnershipTransferredEvent(new_owner_id=msg.user_id, new_owner_username=target_username)
+        await self.channel_layer.group_send(self.room_group_name, event.model_dump(mode='json'))
 
         # Broadcast updated room info and active users to reflect ownership transfer
         await self.send_room_info()
         await self.send_active_users()
 
-    async def handle_delete_room(self, data):
+    async def handle_delete_room(self, msg: WSDeleteRoom):
         is_owner = await self.check_is_owner()
         if not is_owner:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'Only the room owner can delete the room.',
-            }))
+            await self.send(text_data=WSErrorEvent(message='Only the room owner can delete the room.').model_dump_json())
             return
 
         # Notify all users before deletion
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'room_deleted',
-                'message': 'This room has been deleted by the owner.',
-            }
-        )
+        event = WSRoomDeletedEvent(message='This room has been deleted by the owner.')
+        await self.channel_layer.group_send(self.room_group_name, event.model_dump(mode='json'))
 
         # Delete room from database
         await self.delete_room_from_db()
 
     # ─── Room Invitation 
 
-    async def handle_send_room_invite(self, data):
-        target_user_id = data.get('user_id')
-        if not target_user_id:
-            return
-
-        result = await self.create_room_invitation(target_user_id)
+    async def handle_send_room_invite(self, msg: WSSendRoomInvite):
+        result = await self.create_room_invitation(msg.user_id)
         if result.get('error'):
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': result['error'],
-            }))
+            await self.send(text_data=WSErrorEvent(message=result['error']).model_dump_json())
             return
 
         # Send notification to the target user's personal channel
-        await self.channel_layer.group_send(
-            f'user_{target_user_id}',
-            {
-                'type': 'room_invitation_received',
-                'invitation_id': result['invitation_id'],
-                'room_code': self.room_code,
-                'room_name': result['room_name'],
-                'sender_username': self.user.username,
-                'sender_id': self.user.id,
-            }
+        event = WSRoomInvitationReceivedEvent(
+            invitation_id=result['invitation_id'],
+            room_code=self.room_code,
+            room_name=result['room_name'],
+            sender_username=self.user.username,
+            sender_id=self.user.id
         )
+        await self.channel_layer.group_send(f'user_{msg.user_id}', event.model_dump(mode='json'))
 
-        await self.send(text_data=json.dumps({
-            'type': 'invite_sent',
-            'message': f'Invitation sent to {result["receiver_username"]}.',
-        }))
+        await self.send(text_data=WSInviteSentEvent(message=f'Invitation sent to {result["receiver_username"]}.').model_dump_json())
 
-    # ─── Group Event Handlers (called by channel_layer.group_send) 
+    # ─── Group Event Handlers (called by channel_layer.group_send) ───
+    # The sender already serialized via Pydantic .model_dump(), so the event
+    # dict arriving here is already clean. We forward it as-is.
 
     async def user_joined(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'user_joined',
-            'username': event['username'],
-            'user_id': event['user_id'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def user_left(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'user_left',
-            'username': event['username'],
-            'user_id': event['user_id'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def message_created(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'message_created',
-            'message_id': event['message_id'],
-            'sender_id': event['sender_id'],
-            'sender_username': event['sender_username'],
-            'content': event['content'],
-            'created_at': event['created_at'],
-            'reply_to': event['reply_to'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def message_edited(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'message_edited',
-            'message_id': event['message_id'],
-            'content': event['content'],
-            'edited_at': event['edited_at'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def message_deleted(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'message_deleted',
-            'message_id': event['message_id'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def active_users_updated(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'active_users_updated',
-            'users': event['users'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def user_kicked(self, event):
         """Sent directly to the kicked user's channel."""
-        await self.send(text_data=json.dumps({
-            'type': 'user_kicked',
-            'message': event['message'],
-        }))
+        await self.send(text_data=json.dumps(event))
         await self.close()
 
     async def user_kicked_broadcast(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'user_kicked_broadcast',
-            'user_id': event['user_id'],
-            'username': event['username'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def ownership_transferred(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'ownership_transferred',
-            'new_owner_id': event['new_owner_id'],
-            'new_owner_username': event['new_owner_username'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def room_deleted(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'room_deleted',
-            'message': event['message'],
-        }))
+        await self.send(text_data=json.dumps(event))
         await self.close()
 
     async def room_info(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'room_info',
-            'owner_id': event['owner_id'],
-            'owner_username': event['owner_username'],
-            'room_name': event['room_name'],
-            'room_description': event['room_description'],
-            'capacity': event['capacity'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     # ─── Helper: send active users to group 
 
     async def send_active_users(self):
         users = await self.get_active_users()
+        event = WSActiveUsersUpdatedEvent(users=users)
         await self.channel_layer.group_send(
             self.room_group_name,
-            {
-                'type': 'active_users_updated',
-                'users': users,
-            }
+            event.model_dump(mode='json')
         )
 
     async def send_room_info(self):
         info = await self.get_room_info()
         await self.channel_layer.group_send(
             self.room_group_name,
-            {
-                'type': 'room_info',
-                **info,
-            }
+            info.model_dump(mode='json')
         )
 
     # ─── Database Access (sync_to_async) 
@@ -472,13 +359,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_active_users(self):
+        from .schemas import WSActiveUserItem
         memberships = RoomMembership.objects.filter(room=self.room).select_related('user')
         return [
-            {
-                'user_id': m.user.id,
-                'username': m.user.username,
-                'is_owner': m.user.id == self.room.owner_id,
-            }
+            WSActiveUserItem(
+                user_id=m.user.id,
+                username=m.user.username,
+                is_owner=m.user.id == self.room.owner_id,
+            )
             for m in memberships
         ]
 
@@ -487,13 +375,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Refresh from DB
         room = Room.objects.get(pk=self.room.pk)
         self.room = room
-        return {
-            'owner_id': room.owner_id,
-            'owner_username': room.owner.username,
-            'room_name': room.name,
-            'room_description': room.description,
-            'capacity': room.capacity,
-        }
+        return WSRoomInfoEvent(
+            owner_id=room.owner_id,
+            owner_username=room.owner.username,
+            room_name=room.name,
+            room_description=room.description,
+            capacity=room.capacity,
+        )
 
     @database_sync_to_async
     def save_message(self, content, reply_to_id=None):
@@ -650,6 +538,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return True
 
 
+# Discriminated union for NotificationConsumer incoming messages
+# (WSAcceptRoomInvite and WSRejectRoomInvite are already in the
+# main WSIncomingMessage union, so we create a notification-specific one)
+_NotificationIncoming = Annotated[
+    Union[WSAcceptRoomInvite, WSRejectRoomInvite],
+    Field(discriminator='type')
+]
+_NotificationAdapter = TypeAdapter(_NotificationIncoming)
+
+
 class NotificationConsumer(AsyncWebsocketConsumer):
     """
     Global notification WebSocket consumer (one per logged-in user).
@@ -675,60 +573,49 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         try:
-            data = json.loads(text_data)
-        except json.JSONDecodeError:
+            msg = _NotificationAdapter.validate_json(text_data)
+        except ValidationError as e:
+            await self.send(text_data=WSErrorEvent(message=f"Validation error: {e}").model_dump_json())
+            return
+        except Exception:
             return
 
-        event_type = data.get('type')
         handlers = {
-            'accept_room_invite': self.handle_accept_room_invite,
-            'reject_room_invite': self.handle_reject_room_invite,
+            WSAcceptRoomInvite: self.handle_accept_room_invite,
+            WSRejectRoomInvite: self.handle_reject_room_invite,
         }
 
-        handler = handlers.get(event_type)
+        handler = handlers.get(type(msg))
         if handler:
-            await handler(data)
+            await handler(msg)
 
-    async def handle_accept_room_invite(self, data):
-        invitation_id = data.get('invitation_id')
-        result = await self.accept_invitation(invitation_id) # {'room_code': inv.room.room_code}
+    async def handle_accept_room_invite(self, msg: WSAcceptRoomInvite):
+        result = await self.accept_invitation(msg.invitation_id)
 
-        await self.send(text_data=json.dumps({
-            'type': 'invite_response',
-            'status': 'accepted' if result else 'error',
-            'room_code': result.get('room_code') if result else None,
-            'message': 'Invitation accepted!' if result else 'Invitation not found.',
-        }))
+        event = WSInviteResponseEvent(
+            status='accepted' if result else 'error',
+            room_code=result.get('room_code') if result else None,
+            message='Invitation accepted!' if result else 'Invitation not found.',
+        )
+        await self.send(text_data=event.model_dump_json())
 
-    async def handle_reject_room_invite(self, data):
-        invitation_id = data.get('invitation_id')
-        await self.reject_invitation(invitation_id)
+    async def handle_reject_room_invite(self, msg: WSRejectRoomInvite):
+        await self.reject_invitation(msg.invitation_id)
 
-        await self.send(text_data=json.dumps({
-            'type': 'invite_response',
-            'status': 'declined',
-            'message': 'Invitation declined.',
-        }))
+        event = WSInviteResponseEvent(
+            status='declined',
+            message='Invitation declined.',
+        )
+        await self.send(text_data=event.model_dump_json())
 
-    # ─── Group Event Handlers 
+    # ─── Group Event Handlers ───
+    # Events arrive already serialized via Pydantic .model_dump() from the sender.
 
     async def room_invitation_received(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'room_invitation_received',
-            'invitation_id': event['invitation_id'],
-            'room_code': event['room_code'],
-            'room_name': event['room_name'],
-            'sender_username': event['sender_username'],
-            'sender_id': event['sender_id'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     async def friend_request_received(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'friend_request_received',
-            'friendship_id': event['friendship_id'],
-            'sender_username': event['sender_username'],
-            'sender_id': event['sender_id'],
-        }))
+        await self.send(text_data=json.dumps(event))
 
     # ─── Database Access 
 

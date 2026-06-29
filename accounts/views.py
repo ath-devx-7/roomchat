@@ -7,8 +7,17 @@ from django.http import JsonResponse
 from django.db.models import Q
 
 import re
+from pydantic import ValidationError
 
 from .models import Friendship
+from .schemas import (
+    UserCreate,
+    UserLogin,
+    FriendItemResponse,
+    FriendPendingReceivedResponse,
+    FriendPendingSentResponse,
+    FriendsListResponse,
+)
 
 
 def register_view(request):
@@ -25,32 +34,31 @@ def register_view(request):
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
 
-        if not username:
-            errors['username'] = 'Username is required.'
-        elif len(username) > 150:
-            errors['username'] = 'Username must be 150 characters or fewer.'
-        elif not re.match(r'^[\w.@+-]+$', username):
-            errors['username'] = 'Enter a valid username. This value may contain only letters, numbers, and @/./+/-/_ characters.'
-        elif User.objects.filter(username=username).exists():
-            errors['username'] = 'A user with that username already exists.'
-
-        if not email:
-            errors['email'] = 'Email is required.'
-        elif not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
-            errors['email'] = 'Enter a valid email address.'
-
-        if not password:
-            errors['password'] = 'Password is required.'
-        elif len(password) < 8:
-            errors['password'] = 'Password must be at least 8 characters long.'
-
-        if not errors:
-            try:
-                user = User.objects.create_user(username=username, email=email, password=password)
+        try:
+            user_data = UserCreate(username=username, email=email, password=password)
+            if User.objects.filter(username=user_data.username).exists():
+                errors['username'] = 'A user with that username already exists.'
+            else:
+                user = User.objects.create_user(
+                    username=user_data.username,
+                    email=user_data.email,
+                    password=user_data.password
+                )
                 login(request, user)
                 return redirect('dashboard')
-            except Exception as e:
-                errors['username'] = f'Error creating user: {str(e)}'
+        except ValidationError as e:
+            for error in e.errors():
+                loc = error['loc'][0]
+                msg = error['msg']
+                if msg.startswith("Value error, "):
+                    msg = msg[len("Value error, "):]
+                elif msg.startswith("Field required"):
+                    msg = f"{str(loc).capitalize()} is required."
+                elif "email" in str(loc) and any(x in msg for x in ["value is not a valid email address", "single @", "must contain a single @"]):
+                    msg = "Enter a valid email address."
+                errors[str(loc)] = msg
+        except Exception as e:
+            errors['username'] = f'Error creating user: {str(e)}'
 
     return render(request, 'accounts/register.html', {
         'errors': errors,
@@ -71,18 +79,23 @@ def login_view(request):
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
 
-        if not username:
-            errors['username'] = 'Username is required.'
-        if not password:
-            errors['password'] = 'Password is required.'
-
-        if not errors:
-            user = authenticate(request, username=username, password=password)
+        try:
+            login_data = UserLogin(username=username, password=password)
+            user = authenticate(request, username=login_data.username, password=login_data.password)
             if user is not None:
                 login(request, user)
                 return redirect('dashboard')
             else:
                 messages.error(request, 'Invalid username or password.')
+        except ValidationError as e:
+            for error in e.errors():
+                loc = error['loc'][0]
+                msg = error['msg']
+                if msg.startswith("Value error, "):
+                    msg = msg[len("Value error, "):]
+                elif msg.startswith("Field required"):
+                    msg = f"{str(loc).capitalize()} is required."
+                errors[str(loc)] = msg
 
     return render(request, 'accounts/login.html', {
         'errors': errors,
@@ -194,41 +207,44 @@ def friends_list_api(request):
         Q(sender=request.user, status='accepted') |
         Q(receiver=request.user, status='accepted')
     )
-    friends = []
+    friends_list = []
     for f in friendships:
         friend_user = f.receiver if f.sender == request.user else f.sender
-        friends.append({
-            'id': f.id,
-            'user_id': friend_user.id,
-            'username': friend_user.username,
-        })
+        friends_list.append(FriendItemResponse(
+            id=f.id,
+            user_id=friend_user.id,
+            username=friend_user.username
+        ))
 
     pending_received = Friendship.objects.filter(
         receiver=request.user, status='pending'
     )
-    pending = []
-    for f in pending_received:
-        pending.append({
-            'id': f.id,
-            'sender_id': f.sender.id,
-            'sender_username': f.sender.username,
-            'created_at': f.created_at.isoformat(),
-        })
+    pending_received_list = [
+        FriendPendingReceivedResponse(
+            id=f.id,
+            sender_id=f.sender.id,
+            sender_username=f.sender.username,
+            created_at=f.created_at
+        )
+        for f in pending_received
+    ]
 
     pending_sent = Friendship.objects.filter(
         sender=request.user, status='pending'
     )
-    sent = []
-    for f in pending_sent:
-        sent.append({
-            'id': f.id,
-            'receiver_id': f.receiver.id,
-            'receiver_username': f.receiver.username,
-            'created_at': f.created_at.isoformat(),
-        })
+    pending_sent_list = [
+        FriendPendingSentResponse(
+            id=f.id,
+            receiver_id=f.receiver.id,
+            receiver_username=f.receiver.username,
+            created_at=f.created_at
+        )
+        for f in pending_sent
+    ]
 
-    return JsonResponse({
-        'friends': friends,
-        'pending_received': pending,
-        'pending_sent': sent,
-    })
+    response_data = FriendsListResponse(
+        friends=friends_list,
+        pending_received=pending_received_list,
+        pending_sent=pending_sent_list
+    )
+    return JsonResponse(response_data.model_dump(mode='json'))
