@@ -24,6 +24,7 @@ The project was built to explore modern real-time web application architecture u
 | Layer | Technology |
 |---|---|
 | Backend framework | Django |
+| Data Validation and serialization | Pydantic |
 | Real-time layer | Django Channels |
 | ASGI server | Daphne |
 | Database | SQLite |
