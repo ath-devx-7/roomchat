@@ -6,9 +6,11 @@ from django.http import JsonResponse
 from django.db.models import Q
 from pydantic import ValidationError
 
-from .models import Room, RoomMembership, RoomInvitation, Message
+from .models import Room, RoomMembership, Message
 from accounts.models import Friendship
 from .schemas import RoomCreate, RoomJoin, RoomInvitationResponse
+
+from . import services
 
 
 @login_required
@@ -32,18 +34,17 @@ def dashboard(request):
         receiver=request.user, status='pending'
     ).select_related('sender')
 
-    pending_invitations = RoomInvitation.objects.filter(
-        receiver=request.user, status='pending'
-    ).select_related('room', 'sender')
+    pending_invitations = services.get_pending_invitations(request.user)
 
     current_membership = RoomMembership.objects.filter(user=request.user).first()
 
-    return render(request, 'rooms/dashboard.html', {
+    context = {
         'friends': friends,
         'pending_requests': pending_requests,
         'pending_invitations': pending_invitations,
         'current_membership': current_membership,
-    })
+    }
+    return render(request, 'rooms/dashboard.html', context=context)
 
 
 @login_required
@@ -66,20 +67,14 @@ def create_room(request):
                     msg = f"{error['loc'][0].capitalize()} is required."
                 messages.error(request, msg)
             return redirect('dashboard')
-
-        room = Room.objects.create(
-            name=room_data.name,
-            description=room_data.description,
-            password=make_password(room_data.password) if room_data.password else '',
-            capacity=room_data.capacity,
-            owner=request.user,
-        )
-
-        if room_data.password:
-            authorized_rooms = request.session.get('authorized_rooms', [])
-            if room.room_code not in authorized_rooms:
-                authorized_rooms.append(room.room_code)
-                request.session['authorized_rooms'] = authorized_rooms
+        
+        room = services.create_room(request.user, room_data)
+    
+    if room_data.password:
+        authorized_rooms = request.session.get('authorized_rooms', [])
+        if room.room_code not in authorized_rooms:
+            authorized_rooms.append(room.room_code)
+            request.session['authorized_rooms'] = authorized_rooms
 
         return redirect('room', room_code=room.room_code)
 
@@ -93,7 +88,7 @@ def join_room(request):
         try:
             join_data = RoomJoin(
                 room_code=request.POST.get('room_code', ''),
-                password=request.POST.get('password', '')
+                password=request.POST.get('password', ''),
             )
         except ValidationError as e:
             for error in e.errors():
@@ -105,27 +100,13 @@ def join_room(request):
                 messages.error(request, msg)
             return redirect('dashboard')
 
-        try:
-            room = Room.objects.get(room_code=join_data.room_code)
-        except Room.DoesNotExist:
-            messages.error(request, 'Room not found. Check the code and try again.')
-            return redirect('dashboard')
-
-        if room.password and not check_password(join_data.password, room.password):
-            messages.error(request, 'Incorrect room password.')
-            return redirect('dashboard')
-
-        if room.is_full:
-            messages.error(request, 'Room is full.')
-            return redirect('dashboard')
-
-        if room.password:
+        if join_data.room.password:
             authorized_rooms = request.session.get('authorized_rooms', [])
-            if room.room_code not in authorized_rooms:
-                authorized_rooms.append(room.room_code)
+            if join_data.room.room_code not in authorized_rooms:
+                authorized_rooms.append(join_data.room.room_code)
                 request.session['authorized_rooms'] = authorized_rooms
 
-        return redirect('room', room_code=room.room_code)
+        return redirect('room', room_code=join_data.room.room_code)
 
     return redirect('dashboard')
 
@@ -137,9 +118,7 @@ def room_view(request, room_code):
     is_owner = room.owner == request.user
 
     if room.password and not is_owner:
-        has_accepted_invite = RoomInvitation.objects.filter(
-            room=room, receiver=request.user, status='accepted'
-        ).exists()
+        has_accepted_invite = services.has_accepted_room_invitation(request.user, room)
 
         authorized_rooms = request.session.get('authorized_rooms', [])
         if not has_accepted_invite and room.room_code not in authorized_rooms:
@@ -150,19 +129,18 @@ def room_view(request, room_code):
         'sender', 'reply_to', 'reply_to__sender'
     ).order_by('created_at')[:100]
 
-    return render(request, 'rooms/room.html', {
+    context = {
         'room': room,
         'is_owner': is_owner,
         'messages_history': messages_history,
-    })
+    }
+    return render(request, 'rooms/room.html', context=context)
 
 
 @login_required
 def get_invitations_api(request):
     """Return pending room invitations as JSON."""
-    invitations = RoomInvitation.objects.filter(
-        receiver=request.user, status='pending'
-    ).select_related('room', 'sender')
+    invitations = services.get_pending_invitations(request.user)
 
     data = [
         RoomInvitationResponse(

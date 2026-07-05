@@ -9,8 +9,7 @@ from pydantic import ValidationError, TypeAdapter, Field
 from typing import Union, Annotated
 
 from .models import Room, RoomMembership, RoomInvitation, Message
-from accounts.models import Friendship
-from django.db.models import Q
+from . import services
 from .schemas import (
     WSIncomingMessage,
     WSSendMessage,
@@ -484,43 +483,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def create_room_invitation(self, target_user_id):
-        try:
-            target_user = User.objects.get(id=target_user_id)
-        except User.DoesNotExist:
-            return {'error': 'User not found.'}
-
-        # Check they are friends
-        are_friends = Friendship.objects.filter(
-            Q(sender=self.user, receiver=target_user, status='accepted') |
-            Q(sender=target_user, receiver=self.user, status='accepted')
-        ).exists()
-
-        if not are_friends:
-            return {'error': 'You can only invite friends.'}
-
-        # Check if already invited
-        existing = RoomInvitation.objects.filter(
-            room=self.room, receiver=target_user, status='pending'
-        ).exists()
-        if existing:
-            return {'error': 'Invitation already sent.'}
-
-        # Check if already in room
-        in_room = RoomMembership.objects.filter(user=target_user, room=self.room).exists()
-        if in_room:
-            return {'error': 'User is already in this room.'}
-
-        inv = RoomInvitation.objects.create(
-            room=self.room,
-            sender=self.user,
-            receiver=target_user,
-        )
-
-        return {
-            'invitation_id': inv.id,
-            'room_name': self.room.name,
-            'receiver_username': target_user.username,
-        }
+        return services.create_room_invitation(self.user, self.room, target_user_id)
 
     @database_sync_to_async
     def check_and_delete_room_if_empty(self):
@@ -621,24 +584,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def accept_invitation(self, invitation_id):
-        try:
-            inv = RoomInvitation.objects.get(
-                id=invitation_id, receiver=self.user, status='pending'
-            )
-            inv.status = 'accepted'
-            inv.save()
-            return {'room_code': inv.room.room_code}
-        except RoomInvitation.DoesNotExist:
-            return None
+        return services.accept_room_invitation(self.user, invitation_id)
 
     @database_sync_to_async
     def reject_invitation(self, invitation_id):
-        try:
-            inv = RoomInvitation.objects.get(
-                id=invitation_id, receiver=self.user, status='pending'
-            )
-            inv.status = 'declined'
-            inv.save()
-            return True
-        except RoomInvitation.DoesNotExist:
-            return False
+        return services.reject_room_invitation(self.user, invitation_id)

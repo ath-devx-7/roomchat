@@ -1,6 +1,10 @@
 from datetime import datetime
 from typing import List, Literal, Optional, Union, Annotated
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+
+from django.contrib.auth.hashers import check_password
+from pydantic import BaseModel, Field, PrivateAttr, field_validator, ConfigDict, model_validator
+
+from .models import Room
 
 
 # ─── Room HTTP Schemas ───
@@ -36,19 +40,47 @@ class RoomCreate(RoomBase):
         if val > 100:
             return 100
         return val
+    
 
 
 class RoomJoin(BaseModel):
     room_code: str = Field(..., min_length=6, max_length=6)
     password: str = Field(default="")
 
+    _room: Optional[Room] = PrivateAttr(default=None)
+
+    @property
+    def room(self) -> Optional[Room]:
+        return self._room
+
     @field_validator('room_code')
     @classmethod
-    def validate_room_code(cls, v: str) -> str:
-        v = v.strip().upper()
-        if not v:
+    def validate_room_code(cls, code: str) -> str:
+        code = code.strip().upper()
+        if not code:
             raise ValueError("Please enter a room code.")
-        return v
+        return code
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, password: str) -> str:
+        password = password.strip()
+        return password
+
+    @model_validator(mode='after')
+    def validate_room_access(self) -> "RoomJoin":
+        try:
+            self._room = Room.objects.get(room_code=self.room_code)
+        except Room.DoesNotExist as exc:
+            raise ValueError("Room not found. Check the code and try again.") from exc
+
+        if self._room.password and not check_password(self.password, self._room.password):
+            raise ValueError("Incorrect room password.")
+
+        if self._room.is_full:
+            raise ValueError("Room is full.")
+
+        return self
 
 
 class RoomResponse(RoomBase):
