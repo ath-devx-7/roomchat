@@ -9,6 +9,9 @@ from django.db.models import Q
 import re
 from pydantic import ValidationError
 
+from roomchat.errors import format_pydantic_errors
+from roomchat.middleware import json_validation_errors
+
 from .models import Friendship
 from .schemas import (
     UserCreate,
@@ -47,16 +50,7 @@ def register_view(request):
                 login(request, user)
                 return redirect('dashboard')
         except ValidationError as e:
-            for error in e.errors():
-                loc = error['loc'][0]
-                msg = error['msg']
-                if msg.startswith("Value error, "):
-                    msg = msg[len("Value error, "):]
-                elif msg.startswith("Field required"):
-                    msg = f"{str(loc).capitalize()} is required."
-                elif "email" in str(loc) and any(x in msg for x in ["value is not a valid email address", "single @", "must contain a single @"]):
-                    msg = "Enter a valid email address."
-                errors[str(loc)] = msg
+            errors = format_pydantic_errors(e)
         except Exception as e:
             errors['username'] = f'Error creating user: {str(e)}'
 
@@ -88,14 +82,7 @@ def login_view(request):
             else:
                 messages.error(request, 'Invalid username or password.')
         except ValidationError as e:
-            for error in e.errors():
-                loc = error['loc'][0]
-                msg = error['msg']
-                if msg.startswith("Value error, "):
-                    msg = msg[len("Value error, "):]
-                elif msg.startswith("Field required"):
-                    msg = f"{str(loc).capitalize()} is required."
-                errors[str(loc)] = msg
+            errors = format_pydantic_errors(e)
 
     return render(request, 'accounts/login.html', {
         'errors': errors,
@@ -201,6 +188,7 @@ def remove_friend(request, friendship_id):
 
 
 @login_required
+@json_validation_errors
 def friends_list_api(request):
     """Return friends and pending requests as JSON."""
     friendships = Friendship.objects.filter(

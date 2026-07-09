@@ -6,6 +6,9 @@ from django.http import JsonResponse
 from django.db.models import Q
 from pydantic import ValidationError
 
+from roomchat.errors import format_pydantic_errors
+from roomchat.middleware import json_validation_errors
+
 from .models import Room, RoomMembership, Message
 from accounts.models import Friendship
 from .schemas import RoomCreate, RoomJoin, RoomInvitationResponse
@@ -59,15 +62,10 @@ def create_room(request):
                 password=request.POST.get('password', '')
             )
         except ValidationError as e:
-            for error in e.errors():
-                msg = error['msg']
-                if msg.startswith("Value error, "):
-                    msg = msg[len("Value error, "):]
-                elif msg.startswith("Field required"):
-                    msg = f"{error['loc'][0].capitalize()} is required."
+            for msg in format_pydantic_errors(e).values():
                 messages.error(request, msg)
             return redirect('dashboard')
-        
+
         room = services.create_room(request.user, room_data)
     
     if room_data.password:
@@ -91,12 +89,7 @@ def join_room(request):
                 password=request.POST.get('password', ''),
             )
         except ValidationError as e:
-            for error in e.errors():
-                msg = error['msg']
-                if msg.startswith("Value error, "):
-                    msg = msg[len("Value error, "):]
-                elif msg.startswith("Field required"):
-                    msg = f"{error['loc'][0].replace('_', ' ').capitalize()} is required."
+            for msg in format_pydantic_errors(e).values():
                 messages.error(request, msg)
             return redirect('dashboard')
 
@@ -138,6 +131,7 @@ def room_view(request, room_code):
 
 
 @login_required
+@json_validation_errors
 def get_invitations_api(request):
     """Return pending room invitations as JSON."""
     invitations = services.get_pending_invitations(request.user)

@@ -8,6 +8,8 @@ from django.utils import timezone
 from pydantic import ValidationError, TypeAdapter, Field
 from typing import Union, Annotated
 
+from roomchat.errors import format_pydantic_errors
+
 from .models import Room, RoomMembership, RoomInvitation, Message
 from . import services
 from .schemas import (
@@ -115,7 +117,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg = TypeAdapter(WSIncomingMessage).validate_json(text_data)
         except ValidationError as e:
             # Send back validation error event
-            await self.send(text_data=WSErrorEvent(message=f"Validation error: {e}").model_dump_json())
+            message = "; ".join(format_pydantic_errors(e).values())
+            await self.send(text_data=WSErrorEvent(message=message).model_dump_json())
             return
         except Exception:
             return
@@ -538,7 +541,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         try:
             msg = _NotificationAdapter.validate_json(text_data)
         except ValidationError as e:
-            await self.send(text_data=WSErrorEvent(message=f"Validation error: {e}").model_dump_json())
+            message = "; ".join(format_pydantic_errors(e).values())
+            await self.send(text_data=WSErrorEvent(message=message).model_dump_json())
             return
         except Exception:
             return
