@@ -78,10 +78,17 @@
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
-            toast.innerHTML = `
-                <span class="toast-message">${message}</span>
-                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
-            `;
+
+            const text = document.createElement('span');
+            text.className = 'toast-message';
+            text.textContent = message;
+
+            const close = document.createElement('button');
+            close.className = 'toast-close';
+            close.textContent = '×';
+            close.onclick = () => toast.remove();
+
+            toast.append(text, close);
             container.appendChild(toast);
             // Trigger animation
             requestAnimationFrame(() => toast.classList.add('toast-visible'));

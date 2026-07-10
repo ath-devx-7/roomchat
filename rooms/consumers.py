@@ -43,6 +43,13 @@ from .schemas import (
 )
 
 
+# Application close codes. The client keys off these to decide whether to
+# reconnect and what to tell the user.
+CLOSE_ROOM_FULL = 4001
+CLOSE_NOT_AUTHENTICATED = 4003
+CLOSE_ROOM_NOT_FOUND = 4004
+
+
 class ChatConsumer(AsyncWebsocketConsumer):
     """
     WebSocket consumer for room-based chat.
@@ -57,18 +64,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.user = self.scope['user']
 
         if self.user.is_anonymous:
-            await self.close()
+            await self.reject(CLOSE_NOT_AUTHENTICATED, 'You must be signed in to join a room.')
             return
 
         # Validate room exists
         self.room = await self.get_room()
         if not self.room:
-            await self.close()
+            await self.reject(CLOSE_ROOM_NOT_FOUND, 'This room no longer exists.')
             return
 
         # Check capacity
         if await self.is_room_full() and not await self.is_member():
-            await self.close(code=4001)
+            await self.reject(CLOSE_ROOM_FULL, 'This room is full.')
             return
 
         # Join the channel group
@@ -90,8 +97,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Send updated room info (in case ownership changed, etc.)
         await self.send_room_info()
 
+    async def reject(self, code, reason):
+        """Accept then immediately close, so the browser sees our close code.
+
+        Closing before accept() makes the server reject the handshake with an
+        HTTP 403, which the browser reports as close code 1006 — the client
+        cannot tell 'room full' from a dropped connection.
+        """
+        self._rejected = True
+        await self.accept()
+        await self.send(text_data=WSErrorEvent(message=reason).model_dump_json())
+        await self.close(code=code)
+
     async def disconnect(self, close_code):
-        if hasattr(self, 'user') and not self.user.is_anonymous and hasattr(self, 'room'):
+        if getattr(self, '_rejected', False):
+            return
+
+        if hasattr(self, 'user') and not self.user.is_anonymous and getattr(self, 'room', None):
             # Remove membership
             await self.delete_membership()
 
@@ -156,6 +178,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def handle_reply_message(self, msg: WSReplyMessage):
         reply_to_data = await self.get_message_preview(msg.reply_to_id)
+        if reply_to_data is None:
+            await self.send(text_data=WSErrorEvent(
+                message='The message you replied to no longer exists.'
+            ).model_dump_json())
+            return
+
         message = await self.save_message(msg.content, reply_to_id=msg.reply_to_id)
 
         event = WSMessageCreatedEvent(
@@ -231,6 +259,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         target_username = await self.transfer_room_ownership(msg.user_id)
         if not target_username:
+            await self.send(text_data=WSErrorEvent(
+                message='That user is no longer in this room.'
+            ).model_dump_json())
             return
 
         event = WSOwnershipTransferredEvent(new_owner_id=msg.user_id, new_owner_username=target_username)

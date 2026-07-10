@@ -53,55 +53,55 @@ def dashboard(request):
 @login_required
 def create_room(request):
     """Create a new chat room."""
-    if request.method == 'POST':
-        try:
-            room_data = RoomCreate(
-                name=request.POST.get('name', ''),
-                description=request.POST.get('description', ''),
-                capacity=request.POST.get('capacity', '10'),
-                password=request.POST.get('password', '')
-            )
-        except ValidationError as e:
-            for msg in format_pydantic_errors(e).values():
-                messages.error(request, msg)
-            return redirect('dashboard')
+    if request.method != 'POST':
+        return redirect('dashboard')
 
-        room = services.create_room(request.user, room_data)
-    
+    try:
+        room_data = RoomCreate(
+            name=request.POST.get('name', ''),
+            description=request.POST.get('description', ''),
+            capacity=request.POST.get('capacity', '10'),
+            password=request.POST.get('password', '')
+        )
+    except ValidationError as e:
+        for msg in format_pydantic_errors(e).values():
+            messages.error(request, msg)
+        return redirect('dashboard')
+
+    room = services.create_room(request.user, room_data)
+
     if room_data.password:
         authorized_rooms = request.session.get('authorized_rooms', [])
         if room.room_code not in authorized_rooms:
             authorized_rooms.append(room.room_code)
             request.session['authorized_rooms'] = authorized_rooms
 
-        return redirect('room', room_code=room.room_code)
-
-    return redirect('dashboard')
+    return redirect('room', room_code=room.room_code)
 
 
 @login_required
 def join_room(request):
     """Join an existing room by code and optional password."""
-    if request.method == 'POST':
-        try:
-            join_data = RoomJoin(
-                room_code=request.POST.get('room_code', ''),
-                password=request.POST.get('password', ''),
-            )
-        except ValidationError as e:
-            for msg in format_pydantic_errors(e).values():
-                messages.error(request, msg)
-            return redirect('dashboard')
+    if request.method != 'POST':
+        return redirect('dashboard')
 
-        if join_data.room.password:
-            authorized_rooms = request.session.get('authorized_rooms', [])
-            if join_data.room.room_code not in authorized_rooms:
-                authorized_rooms.append(join_data.room.room_code)
-                request.session['authorized_rooms'] = authorized_rooms
+    try:
+        join_data = RoomJoin(
+            room_code=request.POST.get('room_code', ''),
+            password=request.POST.get('password', ''),
+        )
+    except ValidationError as e:
+        for msg in format_pydantic_errors(e).values():
+            messages.error(request, msg)
+        return redirect('dashboard')
 
-        return redirect('room', room_code=join_data.room.room_code)
+    if join_data.room.password:
+        authorized_rooms = request.session.get('authorized_rooms', [])
+        if join_data.room.room_code not in authorized_rooms:
+            authorized_rooms.append(join_data.room.room_code)
+            request.session['authorized_rooms'] = authorized_rooms
 
-    return redirect('dashboard')
+    return redirect('room', room_code=join_data.room.room_code)
 
 
 @login_required

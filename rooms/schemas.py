@@ -44,7 +44,7 @@ class RoomCreate(RoomBase):
 
 
 class RoomJoin(BaseModel):
-    room_code: str = Field(..., min_length=6, max_length=6)
+    room_code: str
     password: str = Field(default="")
 
     _room: Optional[Room] = PrivateAttr(default=None)
@@ -59,6 +59,8 @@ class RoomJoin(BaseModel):
         code = code.strip().upper()
         if not code:
             raise ValueError("Please enter a room code.")
+        if len(code) != 6:
+            raise ValueError("Room code must be 6 characters.")
         return code
 
     @field_validator('password')

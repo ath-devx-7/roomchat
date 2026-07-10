@@ -51,8 +51,17 @@ function handleNotification(data) {
                 showToast(data.message, 'info');
             } else {
                 showToast(data.message || 'Error processing invitation.', 'error');
+                // Restore the invitation the UI optimistically removed
+                setTimeout(() => location.reload(), 1500);
             }
             break;
+
+        case 'error':
+            showToast(data.message, 'error');
+            break;
+
+        default:
+            console.warn('[Notifications] Unhandled message type:', data.type, data);
     }
 }
 
@@ -63,37 +72,48 @@ function addRoomInvitation(data) {
     const noInvitations = document.getElementById('no-invitations');
     if (noInvitations) noInvitations.remove();
 
+    const invitationId = Number(data.invitation_id);
+
     const item = document.createElement('div');
     item.className = 'list-item invitation-item';
-    item.id = `invitation-${data.invitation_id}`;
+    item.id = `invitation-${invitationId}`;
     item.innerHTML = `
         <div class="list-item-info">
             <div class="avatar avatar-sm avatar-room">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </div>
             <div class="list-item-details">
-                <span class="list-item-name">${data.room_name}</span>
-                <span class="list-item-status">from ${data.sender_username}</span>
+                <span class="list-item-name"></span>
+                <span class="list-item-status"></span>
             </div>
         </div>
         <div class="list-item-actions">
-            <button class="btn btn-sm btn-success" onclick="acceptRoomInvite(${data.invitation_id}, '${data.room_code}')">Join</button>
-            <button class="btn btn-sm btn-danger" onclick="rejectRoomInvite(${data.invitation_id})">Decline</button>
+            <button class="btn btn-sm btn-success" data-action="accept">Join</button>
+            <button class="btn btn-sm btn-danger" data-action="decline">Decline</button>
         </div>
     `;
+
+    // Room names are free-form, so bind them as text rather than markup.
+    item.querySelector('.list-item-name').textContent = data.room_name;
+    item.querySelector('.list-item-status').textContent = `from ${data.sender_username}`;
+    item.querySelector('[data-action="accept"]').onclick = () => acceptRoomInvite(invitationId);
+    item.querySelector('[data-action="decline"]').onclick = () => rejectRoomInvite(invitationId);
+
     list.appendChild(item);
 
     // Update count badge
     updateInvitationCount();
 }
 
-function acceptRoomInvite(invitationId, roomCode) {
-    if (notificationSocket && notificationSocket.readyState === WebSocket.OPEN) {
-        notificationSocket.send(JSON.stringify({
-            type: 'accept_room_invite',
-            invitation_id: invitationId,
-        }));
+function acceptRoomInvite(invitationId) {
+    if (!notificationSocket || notificationSocket.readyState !== WebSocket.OPEN) {
+        showToast('Not connected. Please refresh and try again.', 'error');
+        return;
     }
+    notificationSocket.send(JSON.stringify({
+        type: 'accept_room_invite',
+        invitation_id: invitationId,
+    }));
 
     // Remove the invitation item
     const item = document.getElementById(`invitation-${invitationId}`);
@@ -102,12 +122,14 @@ function acceptRoomInvite(invitationId, roomCode) {
 }
 
 function rejectRoomInvite(invitationId) {
-    if (notificationSocket && notificationSocket.readyState === WebSocket.OPEN) {
-        notificationSocket.send(JSON.stringify({
-            type: 'reject_room_invite',
-            invitation_id: invitationId,
-        }));
+    if (!notificationSocket || notificationSocket.readyState !== WebSocket.OPEN) {
+        showToast('Not connected. Please refresh and try again.', 'error');
+        return;
     }
+    notificationSocket.send(JSON.stringify({
+        type: 'reject_room_invite',
+        invitation_id: invitationId,
+    }));
 
     const item = document.getElementById(`invitation-${invitationId}`);
     if (item) {
@@ -138,43 +160,54 @@ function updateInvitationCount() {
 
 // ─── Friend System (AJAX) ───────────────────────────────────
 
+/**
+ * POST and resolve with the JSON body, rejecting with the server's own message
+ * on a 4xx/5xx. Django returns {"error": ...} from these views and
+ * {"errors": {field: msg}} from the @json_validation_errors middleware; an
+ * unhandled 500 returns an HTML debug page, which is not JSON at all.
+ */
+function postJSON(url, body) {
+    const headers = { 'X-CSRFToken': csrftoken };
+    if (body) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+
+    return fetch(url, { method: 'POST', headers, body })
+        .then(res => res.text().then(text => {
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                throw new Error(`Server error (${res.status}). Please try again.`);
+            }
+            if (!res.ok || !data.success) {
+                throw new Error(firstErrorMessage(data) || 'Something went wrong.');
+            }
+            return data;
+        }));
+}
+
+function firstErrorMessage(data) {
+    if (!data) return null;
+    if (data.error) return data.error;
+    if (data.errors) return Object.values(data.errors)[0];
+    return null;
+}
+
 function sendFriendRequest() {
     const input = document.getElementById('friend-username-input');
     const username = input.value.trim();
     if (!username) return;
 
-    fetch('/accounts/friends/send/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': csrftoken,
-        },
-        body: `username=${encodeURIComponent(username)}`,
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
+    postJSON('/accounts/friends/send/', `username=${encodeURIComponent(username)}`)
+        .then(data => {
             showToast(data.message, 'success');
             input.value = '';
-        } else {
-            showToast(data.error, 'error');
-        }
-    })
-    .catch(err => {
-        showToast('Network error. Please try again.', 'error');
-    });
+        })
+        .catch(err => showToast(err.message, 'error'));
 }
 
 function acceptFriendRequest(friendshipId) {
-    fetch(`/accounts/friends/accept/${friendshipId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrftoken,
-        },
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
+    postJSON(`/accounts/friends/accept/${friendshipId}/`)
+        .then(data => {
             showToast(data.message, 'success');
             const item = document.getElementById(`friend-request-${friendshipId}`);
             if (item) {
@@ -184,59 +217,36 @@ function acceptFriendRequest(friendshipId) {
                     location.reload(); // Reload to show in friends list
                 }, 300);
             }
-        } else {
-            showToast(data.error, 'error');
-        }
-    })
-    .catch(err => showToast('Network error.', 'error'));
+        })
+        .catch(err => showToast(err.message, 'error'));
 }
 
 function rejectFriendRequest(friendshipId) {
-    fetch(`/accounts/friends/reject/${friendshipId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrftoken,
-        },
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
+    postJSON(`/accounts/friends/reject/${friendshipId}/`)
+        .then(data => {
             showToast(data.message, 'info');
             const item = document.getElementById(`friend-request-${friendshipId}`);
             if (item) {
                 item.style.opacity = '0';
                 setTimeout(() => item.remove(), 300);
             }
-        } else {
-            showToast(data.error, 'error');
-        }
-    })
-    .catch(err => showToast('Network error.', 'error'));
+        })
+        .catch(err => showToast(err.message, 'error'));
 }
 
 function removeFriend(friendshipId) {
     if (!confirm('Remove this friend?')) return;
 
-    fetch(`/accounts/friends/remove/${friendshipId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrftoken,
-        },
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
+    postJSON(`/accounts/friends/remove/${friendshipId}/`)
+        .then(data => {
             showToast(data.message, 'info');
             const item = document.getElementById(`friend-${friendshipId}`);
             if (item) {
                 item.style.opacity = '0';
                 setTimeout(() => item.remove(), 300);
             }
-        } else {
-            showToast(data.error, 'error');
-        }
-    })
-    .catch(err => showToast('Network error.', 'error'));
+        })
+        .catch(err => showToast(err.message, 'error'));
 }
 
 // ─── Enter key for friend input ─────────────────────────────

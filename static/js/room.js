@@ -16,6 +16,20 @@ let editMessageId = null;
 let activeUsers = [];
 let friendsList = [];
 
+// Set once we are leaving for good, so onclose does not reconnect us into a
+// room we were just removed from while the redirect is still pending.
+let kicked = false;
+let roomDeleted = false;
+let pendingInviteUserId = null;
+
+// Close codes the server uses to refuse a connection. The server accepts the
+// socket before closing so these actually reach us; reconnecting is pointless.
+const FATAL_CLOSE_CODES = {
+    4001: 'This room is full.',
+    4003: 'You must be signed in to join a room.',
+    4004: 'This room no longer exists.',
+};
+
 // ─── WebSocket Connection ───────────────────────────────────
 function connectChatSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -33,12 +47,16 @@ function connectChatSocket() {
     };
 
     chatSocket.onclose = (event) => {
-        console.log('[Chat] Disconnected, reconnecting in 3s...');
-        // Close code 4001 indicates kicked or room full, don't auto-reconnect
-        if (event.code === 4001) {
-            console.log('[Chat] Stopped reconnecting (kicked or room full)');
+        if (kicked || roomDeleted) return;
+
+        const fatalReason = FATAL_CLOSE_CODES[event.code];
+        if (fatalReason) {
+            showToast(fatalReason, 'error');
+            setTimeout(() => { window.location.href = '/dashboard/'; }, 2000);
             return;
         }
+
+        console.log('[Chat] Disconnected, reconnecting in 3s...');
         setTimeout(connectChatSocket, 3000);
     };
 
@@ -76,6 +94,7 @@ function handleChatMessage(data) {
             break;
 
         case 'user_kicked':
+            kicked = true;
             showToast(data.message || 'You have been kicked from the room.', 'error');
             setTimeout(() => {
                 window.location.href = '/dashboard/';
@@ -92,6 +111,7 @@ function handleChatMessage(data) {
             break;
 
         case 'room_deleted':
+            roomDeleted = true;
             showToast(data.message || 'This room has been deleted by the owner.', 'warning');
             setTimeout(() => {
                 window.location.href = '/dashboard/';
@@ -103,12 +123,17 @@ function handleChatMessage(data) {
             break;
 
         case 'invite_sent':
+            resolvePendingInvite(true);
             showToast(data.message, 'success');
             break;
 
         case 'error':
+            resolvePendingInvite(false);
             showToast(data.message, 'error');
             break;
+
+        default:
+            console.warn('[Chat] Unhandled message type:', data.type, data);
     }
 }
 
@@ -381,20 +406,33 @@ window.deleteRoom = function() {
 };
 
 window.inviteFriend = function(userId) {
-    if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-        chatSocket.send(JSON.stringify({
-            type: 'send_room_invite',
-            user_id: userId
-        }));
+    if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) return;
 
-        // Instantly disable button
-        const btn = document.getElementById(`invite-btn-${userId}`);
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'Invited';
-        }
+    chatSocket.send(JSON.stringify({
+        type: 'send_room_invite',
+        user_id: userId
+    }));
+
+    // Disable while in flight; the server confirms with invite_sent or rejects
+    // with an error, and we only commit to "Invited" on confirmation.
+    pendingInviteUserId = userId;
+    const btn = document.getElementById(`invite-btn-${userId}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Inviting...';
     }
 };
+
+function resolvePendingInvite(succeeded) {
+    if (pendingInviteUserId === null) return;
+
+    const btn = document.getElementById(`invite-btn-${pendingInviteUserId}`);
+    if (btn) {
+        btn.disabled = succeeded;
+        btn.textContent = succeeded ? 'Invited' : 'Invite';
+    }
+    pendingInviteUserId = null;
+}
 
 // ─── Room UI Updates ────────────────────────────────────────
 function updateRoomInfoUI(data) {
@@ -495,12 +533,26 @@ function updateInviteFriendsUI() {
 // ─── Fetch Friends List ─────────────────────────────────────
 function fetchFriends() {
     fetch('/accounts/friends/')
-        .then(res => res.json())
+        .then(res => res.json().then(data => {
+            if (!res.ok) throw new Error(firstErrorMessage(data) || 'Could not load your friends list.');
+            return data;
+        }))
         .then(data => {
             friendsList = data.friends || [];
             updateInviteFriendsUI();
         })
-        .catch(err => console.error('Error fetching friends list:', err));
+        .catch(err => {
+            console.error('Error fetching friends list:', err);
+            showToast(err.message || 'Could not load your friends list.', 'error');
+        });
+}
+
+// The @json_validation_errors middleware replies with {"errors": {field: msg}}.
+function firstErrorMessage(data) {
+    if (!data) return null;
+    if (data.error) return data.error;
+    if (data.errors) return Object.values(data.errors)[0];
+    return null;
 }
 
 // ─── Copy Room Code to Clipboard ────────────────────────────

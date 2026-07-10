@@ -11,7 +11,10 @@ def format_pydantic_errors(exc: ValidationError) -> dict[str, str]:
     """
     errors = {}
     for error in exc.errors():
-        loc = error['loc'][0]
+        # Model-level validators (@model_validator) report an empty loc. For a
+        # discriminated union the tag comes first ('send_message', 'content'),
+        # so the field name is always the last element, never the first.
+        loc = error['loc'][-1] if error['loc'] else '__all__'
         msg = error['msg']
         if msg.startswith("Value error, "):
             msg = msg[len("Value error, "):]

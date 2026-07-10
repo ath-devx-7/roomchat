@@ -12,6 +12,9 @@ from pydantic import ValidationError
 from roomchat.errors import format_pydantic_errors
 from roomchat.middleware import json_validation_errors
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 from .models import Friendship
 from .schemas import (
     UserCreate,
@@ -21,6 +24,21 @@ from .schemas import (
     FriendPendingSentResponse,
     FriendsListResponse,
 )
+
+
+def notify_friend_request(friendship):
+    """Push a friend request to the receiver's notification socket."""
+    from rooms.schemas import WSFriendRequestReceivedEvent
+
+    event = WSFriendRequestReceivedEvent(
+        friendship_id=friendship.id,
+        sender_username=friendship.sender.username,
+        sender_id=friendship.sender.id,
+    )
+    async_to_sync(get_channel_layer().group_send)(
+        f'user_{friendship.receiver.id}',
+        event.model_dump(mode='json'),
+    )
 
 
 def register_view(request):
@@ -128,7 +146,8 @@ def send_friend_request(request):
             else:
                 return JsonResponse({'error': 'A friend request already exists.'}, status=400)
 
-        Friendship.objects.create(sender=request.user, receiver=receiver, status='pending')
+        friendship = Friendship.objects.create(sender=request.user, receiver=receiver, status='pending')
+        notify_friend_request(friendship)
         return JsonResponse({'success': True, 'message': f'Friend request sent to {username}.'})
 
     return JsonResponse({'error': 'Invalid request.'}, status=400)

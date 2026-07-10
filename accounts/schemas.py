@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import List
-from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 
 
 class UserBase(BaseModel):
@@ -11,7 +11,9 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     email: EmailStr
-    password: str = Field(..., min_length=8)
+    # Length is enforced in validate_password so the user sees its wording, not
+    # pydantic's "String should have at least 8 characters".
+    password: str
 
     @field_validator('username')
     @classmethod

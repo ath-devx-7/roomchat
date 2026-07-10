@@ -18,11 +18,8 @@
         <form method="post" class="auth-form" id="login-form">
             {% csrf_token %}
 
-            {% if messages %}
-                {% for message in messages %}
-                <div class="form-error">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
+            {# Django messages are rendered once by base.html; iterating them
+               here too would show every message a second time. #}
 
             <div class="form-group">
                 <label for="id_username" class="form-label">Username</label>
