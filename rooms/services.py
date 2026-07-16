@@ -4,7 +4,6 @@ from django.db.models import Q
 
 from accounts.models import Friendship
 from .models import Room, RoomMembership, RoomInvitation
-from .schemas import RoomCreate
 
 
 def create_room(user, room_data):

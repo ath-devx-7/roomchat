@@ -85,14 +85,6 @@ class RoomJoin(BaseModel):
         return self
 
 
-class RoomResponse(RoomBase):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    room_code: str
-    owner_id: int
-    created_at: datetime
-
-
 class RoomInvitationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -100,20 +92,6 @@ class RoomInvitationResponse(BaseModel):
     room_name: str
     sender_username: str
     created_at: datetime
-
-
-# ─── Message HTTP Schemas ───
-
-class MessageResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    sender_id: int
-    sender_username: str
-    content: str
-    created_at: datetime
-    edited_at: Optional[datetime] = None
-    is_deleted: bool = False
-    reply_to: Optional[dict] = None
 
 
 # ─── WebSocket Incoming Payload Schemas (Discriminated Union) ───

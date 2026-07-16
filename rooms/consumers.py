@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -10,7 +9,7 @@ from typing import Union, Annotated
 
 from roomchat.errors import format_pydantic_errors
 
-from .models import Room, RoomMembership, RoomInvitation, Message
+from .models import Room, RoomMembership, Message
 from . import services
 from .schemas import (
     WSIncomingMessage,
@@ -36,7 +35,6 @@ from .schemas import (
     WSRoomDeletedEvent,
     WSRoomInfoEvent,
     WSRoomInvitationReceivedEvent,
-    WSFriendRequestReceivedEvent,
     WSInviteResponseEvent,
     WSInviteSentEvent,
     WSErrorEvent,

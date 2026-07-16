@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.db.models import Q
 
-import re
 from pydantic import ValidationError
 
 from roomchat.errors import format_pydantic_errors

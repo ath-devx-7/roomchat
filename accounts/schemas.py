@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import List
-from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 class UserBase(BaseModel):
@@ -55,23 +55,6 @@ class UserLogin(BaseModel):
         if not v:
             raise ValueError('Password is required.')
         return v
-
-
-class UserResponse(UserBase):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-
-
-class FriendshipBase(BaseModel):
-    status: str
-
-
-class FriendshipResponse(FriendshipBase):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    sender_id: int
-    receiver_id: int
-    created_at: datetime
 
 
 class FriendItemResponse(BaseModel):
