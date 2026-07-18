@@ -195,12 +195,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(self.room_group_name, event.model_dump(mode='json'))
 
     async def handle_edit_message(self, msg: WSEditMessage):
-        success = await self.update_message(msg.message_id, msg.content)
-        if not success:
+        edited_at = await self.update_message(msg.message_id, msg.content)
+        if edited_at is None:
             await self.send(text_data=WSErrorEvent(message='Cannot edit this message.').model_dump_json())
             return
 
-        edited_at = timezone.now().isoformat()
+        edited_at = edited_at.isoformat()
 
         event = WSMessageEditedEvent(
             message_id=msg.message_id,
@@ -454,9 +454,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg.content = new_content
             msg.edited_at = timezone.now()
             msg.save()
-            return True
+            return msg.edited_at
         except Message.DoesNotExist:
-            return False
+            return None
 
     @database_sync_to_async
     def soft_delete_message(self, message_id):
