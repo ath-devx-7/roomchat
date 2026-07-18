@@ -18,9 +18,6 @@
         <form method="post" class="auth-form" id="login-form">
             {% csrf_token %}
 
-            {# Django messages are rendered once by base.html; iterating them
-               here too would show every message a second time. #}
-
             <div class="form-group">
                 <label for="id_username" class="form-label">Username</label>
                 <input type="text" name="username" id="id_username" class="form-input" placeholder="Enter your username" autocomplete="off" value="{{ username }}" required>
