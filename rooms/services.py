@@ -22,16 +22,6 @@ def create_room(user, room_data):
     return room
 
 
-def join_room(user, room, password):
-    # Check if the user can join the room with the provided password.
-    if room.password and not check_password(password, room.password):
-        raise ValueError("Incorrect password for the room.")
-
-    # Add the user to the room's membership.
-    RoomMembership.objects.create(user=user, room=room)
-    return room
-
-
 def get_pending_invitations(user):
     return RoomInvitation.objects.filter(receiver=user, status='pending').select_related('room', 'sender')
 
