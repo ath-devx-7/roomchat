@@ -76,6 +76,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.reject(CLOSE_ROOM_FULL, 'This room is full.')
             return
 
+        # Check if the user is authorized to join the room (owner, accepted invite, or password session)
+        if self.room.password and not await self.is_member():
+            authorized_rooms = self.scope['session'].get('authorized_rooms', [])
+            is_authorized = (
+                await self.check_is_owner()
+                or await self.has_accepted_invite()
+                or self.room.room_code in authorized_rooms
+            )
+            if not is_authorized:
+                await self.reject(CLOSE_NOT_AUTHENTICATED, 'This room is protected. Please join using the password on the dashboard.')
+                return
+
         # Join the channel group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
@@ -377,6 +389,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return RoomMembership.objects.filter(user=self.user, room=self.room).exists()
 
     @database_sync_to_async
+    def has_accepted_invite(self):
+        return services.has_accepted_room_invitation(self.user, self.room)
+
+    @database_sync_to_async
     def create_membership(self):
         RoomMembership.objects.update_or_create(
             user=self.user,
@@ -532,10 +548,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except Exception:
             return True
 
-
-# Discriminated union for NotificationConsumer incoming messages
-# (WSAcceptRoomInvite and WSRejectRoomInvite are already in the
-# main WSIncomingMessage union, so we create a notification-specific one)
 _NotificationIncoming = Annotated[
     Union[WSAcceptRoomInvite, WSRejectRoomInvite],
     Field(discriminator='type')
