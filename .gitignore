@@ -80,3 +80,6 @@ coverage.xml
 *.sfdx
 .hypothesis/
 .pytest_cache/
+
+# Github
+issues.txt
