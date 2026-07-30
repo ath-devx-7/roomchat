@@ -61,9 +61,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'roomchat.wsgi.application'
 ASGI_APPLICATION = 'roomchat.asgi.application'
 
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')
+
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.pubsub.RedisPubSubChannelLayer',
+        'CONFIG': {
+            'hosts': [REDIS_URL],
+        },
     },
 }
 
