@@ -110,8 +110,6 @@ def login_view(request):
 
 def logout_view(request):
     """Handle user logout."""
-    if 'authorized_rooms' in request.session:
-        del request.session['authorized_rooms']
     logout(request)
     return redirect('login')
 

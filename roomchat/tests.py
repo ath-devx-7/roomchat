@@ -6,13 +6,14 @@ from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
 from channels_redis.pubsub import RedisPubSubChannelLayer
 from django.conf import settings
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
-from django.test import SimpleTestCase, TransactionTestCase
+from django.test import SimpleTestCase, TestCase, TransactionTestCase
 from pydantic import ValidationError
 
 from accounts.schemas import UserCreate
 from rooms.consumers import CLOSE_NOT_AUTHENTICATED
-from rooms.models import Room, RoomInvitation
+from rooms.models import Message, Room, RoomInvitation
 from rooms.routing import websocket_urlpatterns
 from rooms.schemas import RoomCreate, WSFriendRequestReceivedEvent
 from roomchat.errors import format_pydantic_errors
@@ -273,9 +274,11 @@ class NotificationConsumerCrossProcessTests(TransactionTestCase):
 
 
 class ChatConsumerPasswordGateTests(TransactionTestCase):
-    """The WS password gate must mirror room_view: owners and users with an
-    accepted invitation bypass the password, everyone else needs the room in
-    session['authorized_rooms']."""
+    """The WS gate is a plain session check: owners bypass, everyone else needs
+    session['room_grant'] to hold this room's code.
+
+    room_view is the only thing that mints a grant — including from an accepted
+    invitation — so an invitation alone does not open a socket."""
 
     def setUp(self):
         self.owner = User.objects.create_user('owner', password='x')
@@ -315,19 +318,93 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
         self.assertNotEqual(first['type'], 'error')
         await communicator.disconnect()
 
-    async def test_unauthorized_user_is_rejected(self):
+    async def test_user_without_grant_is_rejected(self):
         await self._assert_rejected(self._communicator(self.other))
 
     async def test_owner_bypasses_password(self):
         await self._assert_admitted(self._communicator(self.owner))
 
-    async def test_accepted_invite_bypasses_password(self):
+    async def test_accepted_invite_alone_is_rejected(self):
+        # The invitation is consumed by room_view, not read here.
         await RoomInvitation.objects.acreate(
             room=self.room, sender=self.owner, receiver=self.other,
             status='accepted',
         )
-        await self._assert_admitted(self._communicator(self.other))
+        await self._assert_rejected(self._communicator(self.other))
 
-    async def test_authorized_session_is_admitted(self):
-        session = {'authorized_rooms': [self.room.room_code]}
+    async def test_matching_grant_is_admitted(self):
+        session = {'room_grant': self.room.room_code}
         await self._assert_admitted(self._communicator(self.other, session))
+
+    async def test_grant_for_another_room_is_rejected(self):
+        session = {'room_grant': 'OTHER1'}
+        await self._assert_rejected(self._communicator(self.other, session))
+
+
+class RoomViewGateTests(TestCase):
+    """room_view is the HTTP gate and the only place a grant is minted."""
+
+    PASSWORD = 'hunter22'
+
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', password='x')
+        self.other = User.objects.create_user('other', password='x')
+        self.room = Room.objects.create(
+            name='Secret', owner=self.owner, password=make_password(self.PASSWORD),
+        )
+        self.open_room = Room.objects.create(name='Open', owner=self.owner)
+        # Distinctive enough that finding it in a response body means the
+        # history query ran for someone who had not unlocked the room.
+        self.secret_line = 'topsecretchatter'
+        Message.objects.create(room=self.room, sender=self.owner, content=self.secret_line)
+        self.client.force_login(self.other)
+
+    def _url(self, room):
+        return f'/room/{room.room_code}/'
+
+    def test_locked_room_without_grant_redirects_and_leaks_no_history(self):
+        response = self.client.get(self._url(self.room), follow=True)
+        self.assertRedirects(response, '/dashboard/')
+        self.assertNotContains(response, self.secret_line)
+        self.assertNotIn('room_grant', self.client.session)
+
+    def test_correct_password_mints_grant_and_admits(self):
+        response = self.client.post('/room/join/', {
+            'room_code': self.room.room_code, 'password': self.PASSWORD,
+        })
+        self.assertRedirects(response, self._url(self.room))
+        self.assertEqual(self.client.session['room_grant'], self.room.room_code)
+        self.assertContains(self.client.get(self._url(self.room)), self.secret_line)
+
+    def test_bare_code_with_empty_password_is_rejected(self):
+        response = self.client.post('/room/join/', {
+            'room_code': self.room.room_code, 'password': '',
+        }, follow=True)
+        self.assertContains(response, 'Incorrect room password.')
+        self.assertNotIn('room_grant', self.client.session)
+
+    def test_accepted_invitation_admits_exactly_once(self):
+        RoomInvitation.objects.create(
+            room=self.room, sender=self.owner, receiver=self.other, status='accepted',
+        )
+        self.assertContains(self.client.get(self._url(self.room)), self.secret_line)
+        self.assertFalse(
+            RoomInvitation.objects.filter(room=self.room, receiver=self.other).exists()
+        )
+
+        # Stand in for the socket dropping, which is what revokes the grant.
+        session = self.client.session
+        del session['room_grant']
+        session.save()
+
+        again = self.client.get(self._url(self.room), follow=True)
+        self.assertRedirects(again, '/dashboard/')
+        self.assertNotContains(again, self.secret_line)
+
+    def test_owner_needs_no_grant(self):
+        self.client.force_login(self.owner)
+        self.assertContains(self.client.get(self._url(self.room)), self.secret_line)
+        self.assertNotIn('room_grant', self.client.session)
+
+    def test_open_room_is_reachable_directly(self):
+        self.assertEqual(self.client.get(self._url(self.open_room)).status_code, 200)

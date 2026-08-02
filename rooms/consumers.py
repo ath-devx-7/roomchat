@@ -1,7 +1,9 @@
 import json
+from importlib import import_module
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils import timezone
 from pydantic import ValidationError, TypeAdapter, Field
@@ -76,15 +78,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.reject(CLOSE_ROOM_FULL, 'This room is full.')
             return
 
-        # Check if the user is authorized to join the room (owner, accepted invite, or password session)
-        if self.room.password and not await self.is_member():
-            authorized_rooms = self.scope['session'].get('authorized_rooms', [])
-            is_authorized = (
-                await self.check_is_owner()
-                or await self.has_accepted_invite()
-                or self.room.room_code in authorized_rooms
-            )
-            if not is_authorized:
+        # Check if the user is authorized to join the room. room_view is the only
+        # thing that mints a grant, and every socket is opened from a page it
+        # rendered, so this gate is a plain session check. Deliberately no
+        # is_member() short-circuit: a stale membership row from an unclean
+        # disconnect must not skip the password.
+        if self.room.password and not await self.check_is_owner():
+            if self.scope['session'].get('room_grant') != self.room_code:
                 await self.reject(CLOSE_NOT_AUTHENTICATED, 'This room is protected. Please join using the password on the dashboard.')
                 return
 
@@ -126,6 +126,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if hasattr(self, 'user') and not self.user.is_anonymous and getattr(self, 'room', None):
             # Remove membership
             await self.delete_membership()
+
+            # Leaving the room revokes the password grant
+            await self.revoke_room_grant()
 
             # Check if room is empty and delete it if so
             room_deleted = await self.check_and_delete_room_if_empty()
@@ -389,8 +392,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return RoomMembership.objects.filter(user=self.user, room=self.room).exists()
 
     @database_sync_to_async
-    def has_accepted_invite(self):
-        return services.has_accepted_room_invitation(self.user, self.room)
+    def revoke_room_grant(self):
+        """Drop this room's session grant so re-entry needs the password again.
+
+        Channels' SessionMiddleware only persists scope['session'] when a
+        websocket.accept/close is sent, so disconnect() has to save explicitly.
+        Load a fresh store rather than the connect-time snapshot, so this does
+        not clobber HTTP-side session changes made during the connection.
+        """
+        session_key = getattr(self.scope.get('session'), 'session_key', None)
+        if not session_key:
+            # Anonymous sessions, and the plain-dict scopes the tests inject.
+            return
+
+        store = import_module(settings.SESSION_ENGINE).SessionStore(session_key)
+        # Only our own room: the user may have joined a different one since.
+        if store.get('room_grant') == self.room_code:
+            del store['room_grant']
+            store.save()
 
     @database_sync_to_async
     def create_membership(self):

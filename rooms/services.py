@@ -26,10 +26,6 @@ def get_pending_invitations(user):
     return RoomInvitation.objects.filter(receiver=user, status='pending').select_related('room', 'sender')
 
 
-def has_accepted_room_invitation(user, room):
-    return RoomInvitation.objects.filter(room=room, receiver=user, status='accepted').exists()
-
-
 def create_room_invitation(actor, room, target_user_id):
     try:
         target_user = User.objects.get(id=target_user_id)

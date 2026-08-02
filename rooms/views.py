@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from roomchat.errors import format_pydantic_errors
 from roomchat.middleware import json_validation_errors
 
-from .models import Room, RoomMembership, Message
+from .models import Room, RoomMembership, Message, RoomInvitation
 from accounts.models import Friendship
 from .schemas import RoomCreate, RoomJoin, RoomInvitationResponse
 
@@ -69,12 +69,7 @@ def create_room(request):
 
     room = services.create_room(request.user, room_data)
 
-    if room_data.password:
-        authorized_rooms = request.session.get('authorized_rooms', [])
-        if room.room_code not in authorized_rooms:
-            authorized_rooms.append(room.room_code)
-            request.session['authorized_rooms'] = authorized_rooms
-
+    # No grant needed: the creator is the owner, and owners bypass the gate.
     return redirect('room', room_code=room.room_code)
 
 
@@ -94,11 +89,9 @@ def join_room(request):
             messages.error(request, msg)
         return redirect('dashboard')
 
-    if join_data.room.password:
-        authorized_rooms = request.session.get('authorized_rooms', [])
-        if join_data.room.room_code not in authorized_rooms:
-            authorized_rooms.append(join_data.room.room_code)
-            request.session['authorized_rooms'] = authorized_rooms
+    # RoomJoin has already verified the password; unlock the room for as long as
+    # the user stays connected to it. One slot, so this replaces any prior grant.
+    request.session['room_grant'] = join_data.room.room_code
 
     return redirect('room', room_code=join_data.room.room_code)
 
@@ -109,13 +102,22 @@ def room_view(request, room_code):
     room = get_object_or_404(Room, room_code=room_code)
     is_owner = room.owner == request.user
 
-    if room.password and not is_owner:
-        has_accepted_invite = services.has_accepted_room_invitation(request.user, room)
-
-        authorized_rooms = request.session.get('authorized_rooms', [])
-        if not has_accepted_invite and room.room_code not in authorized_rooms:
+    # The gate runs before the history query below, so a user who has not
+    # unlocked the room never receives any of its messages.
+    if room.password and not is_owner and request.session.get('room_grant') != room.room_code:
+        # An accepted invitation admits the user exactly once: consume the row
+        # and mint the same grant a correct password would have. This is the only
+        # place an invitation grants access, which is why the WebSocket gate can
+        # stay a plain session check.
+        invite = RoomInvitation.objects.filter(
+            room=room, receiver=request.user, status='accepted'
+        ).first()
+        if not invite:
             messages.error(request, 'This room is protected. Please join using the password on the dashboard.')
             return redirect('dashboard')
+
+        invite.delete()
+        request.session['room_grant'] = room.room_code
 
     messages_history = Message.objects.filter(room=room).select_related(
         'sender', 'reply_to', 'reply_to__sender'
