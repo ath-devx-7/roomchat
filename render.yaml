@@ -1,0 +1,73 @@
+# Render Blueprint for RoomChat.
+#
+# Stands up three services: the ASGI web service, a Postgres database and a Key Value
+# (Redis) instance for the Channels layer. All three must share a region — fromDatabase
+# yields the database's *internal* hostname and fromService yields redis://red-xxxx:6379,
+# and neither resolves across regions.
+
+databases:
+  - name: roomchat-db
+    databaseName: roomchat
+    user: roomchat
+    plan: free
+    region: oregon
+
+services:
+  - type: keyvalue
+    name: roomchat-redis
+    plan: free
+    region: oregon
+    # Empty list = reachable only from inside Render's network.
+    ipAllowList: []
+
+  - type: web
+    name: roomchat
+    runtime: python
+    plan: free
+    region: oregon
+    # '/' redirects to the dashboard; the login page is a plain 200.
+    healthCheckPath: /accounts/login/
+    # migrate lives here because preDeployCommand requires a paid instance type. If it
+    # ever fails at build time, move it to the front of startCommand instead — safe on a
+    # single instance.
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --no-input &&
+      python manage.py migrate
+    # Daphne, not gunicorn: WebSockets need ASGI. --proxy-headers makes Daphne read the
+    # real client address out of X-Forwarded-For.
+    startCommand: daphne -b 0.0.0.0 -p $PORT --proxy-headers roomchat.asgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      # ALLOWED_HOSTS is deliberately absent — settings.py derives it from
+      # RENDER_EXTERNAL_HOSTNAME, which Render injects automatically.
+      - key: DB_NAME
+        fromDatabase:
+          name: roomchat-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: roomchat-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: roomchat-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: roomchat-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: roomchat-db
+          property: port
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: roomchat-redis
+          property: connectionString

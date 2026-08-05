@@ -1,8 +1,9 @@
-﻿annotated-types==0.7.0
+annotated-types==0.7.0
 asgiref==3.11.1
 attrs==26.1.0
 autobahn==25.12.2
 Automat==25.4.16
+Brotli==1.2.0
 cbor2==6.1.2
 cffi==2.0.0
 channels==4.3.2
@@ -12,7 +13,6 @@ cryptography==49.0.0
 daphne==4.2.2
 Django==6.0.6
 dnspython==2.8.0
-dotenv==0.9.9
 email-validator==2.3.0
 hyperlink==21.0.0
 idna==3.18
@@ -36,4 +36,5 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2026.2
 ujson==5.13.0
+whitenoise==6.12.0
 zope.interface==8.5

@@ -5,6 +5,7 @@ CLAUDE.md
 *.log
 db.sqlite3
 db.sqlite3-journal
+staticfiles/
 
 # Python #
 __pycache__/
@@ -12,6 +13,7 @@ __pycache__/
 
 # Environment #
 .env
+.env.production
 .venv/
 
 # Editor #

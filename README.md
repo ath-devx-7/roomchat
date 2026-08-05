@@ -180,3 +180,20 @@ Two things to know before you run it:
 - **PostgreSQL and Redis must both be running.** There is no in-memory channel-layer override in the test settings, so a Redis connection failure fails the suite rather than skipping it. The database user also needs permission to create the test database (the default `postgres` superuser has it).
 - **Don't run the suite while a dev server is live on the same Redis.** The tests use fixed channel-group names, and Redis pub/sub is not scoped by database number — so pointing the suite at a different `/N` will not isolate it from a running server.
 
+## Deployment
+
+`render.yaml` is a [Render](https://render.com) Blueprint that provisions all three pieces the app needs — the ASGI web service, PostgreSQL, and a Key Value (Redis) instance for the channel layer — and wires the connection details between them automatically. Point a new Blueprint at the repository and no environment variables need to be entered by hand: `SECRET_KEY` is generated, the five `DB_*` values come from the database, `REDIS_URL` comes from the Key Value instance, and `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` are derived in `settings.py` from the hostname Render injects.
+
+`.env.production.example` documents the same variable set for deploying anywhere else.
+
+Two details specific to this stack:
+
+- **The server must be Daphne, not Gunicorn.** WebSockets need ASGI, so the start command is `daphne -b 0.0.0.0 -p $PORT --proxy-headers roomchat.asgi:application`. A WSGI server will serve the pages fine and then break every real-time feature.
+- **Static files are served by WhiteNoise** from inside the ASGI process, so `collectstatic` runs at build time and there is no separate static host to configure.
+
+Worth knowing before you deploy on the free tier:
+
+- Free PostgreSQL instances are deleted after 30 days.
+- Free web services spin down after ~15 minutes of inactivity, and the first request afterwards takes 30–60 seconds. Because a room is deleted along with its messages when its last member disconnects, a spin-down or a redeploy destroys every live room and its chat history — the intended design, just triggered more often than it is locally.
+- The same restarts leave stale presence rows behind, which can make an empty room report itself as full. See `github-issues/deploy-issues.txt`.
+
