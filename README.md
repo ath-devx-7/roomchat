@@ -10,7 +10,7 @@ The project was built to explore modern real-time web application architecture u
 - 🔐 **Authentication System** – User registration, login, and session-based authentication.
 - 👥 **Friend Management** – Send, accept, and remove friend requests.
 - 🏠 **Room-Based Chat** – Create or join rooms using unique 6-character room codes. Rooms are ephemeral: once in use, a room is deleted as soon as its last member disconnects (see [Room lifecycle](#room-lifecycle)).
-- 🔑 **Private Rooms** – Optional password protection and a configurable capacity of 2–100 members (default 10).
+- 🔑 **Private Rooms** – Optional password protection and a configurable capacity of 2–100 members [default 10].
 - ⚡ **Real-Time Messaging** – Instant message delivery using WebSockets and Django Channels.
 - 💬 **Message Actions** – Reply to, edit, and delete messages.
 - 👤 **Presence Tracking** – Live active-user list with join/leave notifications.
