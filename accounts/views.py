@@ -52,10 +52,17 @@ def register_view(request):
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
+        # Passwords are never stripped — trimming one silently changes it.
         password = request.POST.get('password', '')
+        confirm_password = request.POST.get('confirm_password', '')
 
         try:
-            user_data = UserCreate(username=username, email=email, password=password)
+            user_data = UserCreate(
+                username=username,
+                email=email,
+                password=password,
+                confirm_password=confirm_password,
+            )
             if User.objects.filter(username=user_data.username).exists():
                 errors['username'] = 'A user with that username already exists.'
             else:

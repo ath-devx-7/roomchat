@@ -45,6 +45,49 @@ class FormatPydanticErrorsTests(SimpleTestCase):
         self.assertNotIn('Value error,', errors.get('name', ''))
 
 
+class ConfirmPasswordTests(SimpleTestCase):
+    """UserCreate.confirm_password must report under its own field name.
+
+    A @model_validator would land on '__all__', which the Django template
+    language cannot render (variables may not start with an underscore), so the
+    check lives in a field validator reading info.data instead.
+    """
+
+    def test_matching_passwords_validate(self):
+        user = UserCreate(
+            username='alice', email='alice@example.com',
+            password='hunter22', confirm_password='hunter22',
+        )
+        self.assertEqual(user.password, 'hunter22')
+
+    def test_mismatch_reports_on_confirm_password(self):
+        exc = _validation_error(
+            UserCreate, username='alice', email='alice@example.com',
+            password='hunter22', confirm_password='hunter33',
+        )
+        errors = format_pydantic_errors(exc)
+        self.assertEqual(errors['confirm_password'], 'The two passwords do not match.')
+
+    def test_blank_confirmation_is_reported(self):
+        exc = _validation_error(
+            UserCreate, username='alice', email='alice@example.com',
+            password='hunter22', confirm_password='',
+        )
+        errors = format_pydantic_errors(exc)
+        self.assertEqual(errors['confirm_password'], 'Please confirm your password.')
+
+    def test_bad_password_does_not_also_report_a_mismatch(self):
+        # password is absent from info.data once it fails, so the match check is
+        # skipped rather than firing a second, misleading error.
+        exc = _validation_error(
+            UserCreate, username='alice', email='alice@example.com',
+            password='short', confirm_password='short',
+        )
+        errors = format_pydantic_errors(exc)
+        self.assertEqual(errors['password'], 'Password must be at least 8 characters long.')
+        self.assertNotIn('confirm_password', errors)
+
+
 class PydanticValidationErrorMiddlewareTests(SimpleTestCase):
     def setUp(self):
         self.get_response = Mock(return_value='response')

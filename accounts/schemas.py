@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import List
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, ValidationInfo, field_validator
 
 
 class UserBase(BaseModel):
@@ -14,6 +14,10 @@ class UserCreate(UserBase):
     # Length is enforced in validate_password so the user sees its wording, not
     # pydantic's "String should have at least 8 characters".
     password: str
+    # Must stay declared after `password`: the match check reads info.data, which
+    # only holds fields validated before this one. Defaulted so the model is still
+    # constructible with the three original arguments.
+    confirm_password: str = ''
 
     @field_validator('username')
     @classmethod
@@ -34,6 +38,19 @@ class UserCreate(UserBase):
             raise ValueError('Password is required.')
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters long.')
+        return v
+
+    @field_validator('confirm_password')
+    @classmethod
+    def validate_confirm_password(cls, v: str, info: ValidationInfo) -> str:
+        if not v:
+            raise ValueError('Please confirm your password.')
+        # `password` is missing from info.data when it failed its own validator.
+        # That error is already on its way to the user, so don't pile a spurious
+        # mismatch on top of it.
+        password = info.data.get('password')
+        if password is not None and v != password:
+            raise ValueError('The two passwords do not match.')
         return v
 
 
