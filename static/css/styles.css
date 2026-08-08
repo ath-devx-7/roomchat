@@ -1,75 +1,61 @@
-/* ════════════════════════════════════════════════════════════
-   RoomChat — Premium Dark Theme Stylesheet
-   ════════════════════════════════════════════════════════════ */
+/* RoomChat stylesheet
+   Light UI. Class names are a contract with static/js/room.js and
+   static/js/dashboard.js — rename nothing here without grepping those first. */
 
-/* ─── CSS Variables / Design Tokens ────────────────────────── */
+/* --- Tokens --------------------------------------------------------------- */
 :root {
-    /* Background layers */
-    --bg-deep: #0a0a0f;
-    --bg-base: #0f0f18;
-    --bg-surface: #161625;
-    --bg-elevated: #1c1c2e;
-    --bg-hover: #24243a;
-    --bg-active: #2a2a45;
+    /* Surfaces */
+    --bg-page: #f6f8fb;
+    --bg-surface: #ffffff;
+    --bg-subtle: #f1f3f7;
+    --bg-sunken: #eceff4;
 
-    /* Text */
-    --text-primary: #e8e6f0;
-    --text-secondary: #9694a8;
-    --text-muted: #5c5a6e;
-    --text-inverse: #0a0a0f;
+    /* Text. --text-muted is 4.6:1 on white; it carries timestamps, don't lighten it. */
+    --text: #1d273b;
+    --text-secondary: #667382;
+    --text-muted: #6b7688;
 
-    /* Accent — vivid purple-blue */
-    --accent: #7c5cfc;
-    --accent-hover: #9178ff;
-    --accent-soft: rgba(124, 92, 252, 0.12);
-    --accent-glow: rgba(124, 92, 252, 0.25);
-
-    /* Secondary accent — teal */
-    --accent2: #2dd4bf;
-    --accent2-hover: #5eead4;
-    --accent2-soft: rgba(45, 212, 191, 0.12);
+    /* Accent */
+    --primary: #206bc4;
+    --primary-hover: #1a579f;
+    --primary-soft: #e8f0fa;
+    --primary-border: #c5d9f1;
 
     /* Semantic */
-    --success: #34d399;
-    --success-soft: rgba(52, 211, 153, 0.12);
-    --danger: #f87171;
-    --danger-soft: rgba(248, 113, 113, 0.12);
-    --warning: #fbbf24;
-    --info: #60a5fa;
+    --green: #2fb344;
+    --green-soft: #eaf7ec;
+    --red: #d63939;
+    --red-soft: #fbecec;
+    --yellow: #f59f00;
+    --yellow-soft: #fdf3e2;
+    --azure: #4299e1;
+    --azure-soft: #e9f2fb;
+    --teal: #0ca678;
+    --teal-soft: #e6f4f1;
 
-    /* Borders */
-    --border: rgba(255, 255, 255, 0.06);
-    --border-hover: rgba(255, 255, 255, 0.12);
-    --border-accent: rgba(124, 92, 252, 0.3);
+    --border: #e4e7ec;
+    --border-strong: #d2d7e0;
 
-    /* Glassmorphism */
-    --glass-bg: rgba(22, 22, 37, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-blur: 16px;
-
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 20px var(--accent-glow);
-
-    /* Radius */
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 16px;
-    --radius-xl: 20px;
+    --radius-sm: 3px;
+    --radius: 4px;
+    --radius-lg: 8px;
+    --radius-bubble: 12px;
     --radius-full: 9999px;
 
-    /* Transitions */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-sm: 0 1px 2px rgba(29, 39, 59, 0.06);
+    --shadow-md: 0 2px 8px rgba(29, 39, 59, 0.10);
+    --shadow-lg: 0 8px 24px rgba(29, 39, 59, 0.14);
 
-    /* Font */
+    --transition-fast: 120ms ease;
+    --transition-base: 180ms ease;
+
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+    --nav-height: 56px;
 }
 
-/* ─── Reset & Base ─────────────────────────────────────────── */
+/* --- Reset & base --------------------------------------------------------- */
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -77,48 +63,38 @@
 }
 
 html {
-    font-size: 15px;
-    scroll-behavior: smooth;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
     font-family: var(--font);
-    background: var(--bg-deep);
-    color: var(--text-primary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    background: var(--bg-page);
+    color: var(--text);
     min-height: 100vh;
-    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle animated gradient background */
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background:
-        radial-gradient(ellipse at 20% 20%, rgba(124, 92, 252, 0.06) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 80%, rgba(45, 212, 191, 0.04) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
-}
-
 a {
-    color: var(--accent);
+    color: var(--primary);
     text-decoration: none;
-    transition: color var(--transition-fast);
 }
 
 a:hover {
-    color: var(--accent-hover);
+    color: var(--primary-hover);
+    text-decoration: underline;
 }
 
-/* Custom scrollbar */
+svg {
+    display: block;
+}
+
 ::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -126,15 +102,21 @@ a:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--bg-active);
+    background: #cdd3dc;
     border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
+    background: #b4bcc8;
 }
 
-/* ─── Navbar ───────────────────────────────────────────────── */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* --- Navbar --------------------------------------------------------------- */
+/* Height is fixed at --nav-height: .room-container sizes itself against it. */
 .navbar {
     position: sticky;
     top: 0;
@@ -142,182 +124,186 @@ a:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
-    height: 56px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-bottom: 1px solid var(--glass-border);
+    gap: 16px;
+    padding: 0 20px;
+    height: var(--nav-height);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
 }
 
 .nav-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .nav-logo {
-    color: var(--accent);
     display: flex;
     align-items: center;
+    color: var(--primary);
 }
 
 .nav-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
 }
 
 .nav-actions {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 4px;
 }
 
 .nav-user {
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
+    gap: 8px;
+    padding-right: 12px;
+    margin-right: 8px;
+    border-right: 1px solid var(--border);
+    font-size: 0.8125rem;
     font-weight: 500;
+    color: var(--text);
 }
 
 .nav-link {
-    font-size: 0.825rem;
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    font-size: 0.8125rem;
     font-weight: 500;
-    padding: 6px 14px;
-    border-radius: var(--radius-full);
     color: var(--text-secondary);
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .nav-link:hover {
-    color: var(--text-primary);
-    background: var(--bg-hover);
+    background: var(--bg-subtle);
+    color: var(--text);
+    text-decoration: none;
 }
 
-.nav-logout {
-    color: var(--danger);
-}
-
-.nav-logout:hover {
-    background: var(--danger-soft);
-    color: var(--danger);
-}
-
-/* ─── Main Content ─────────────────────────────────────────── */
+/* --- Layout --------------------------------------------------------------- */
 .main-content {
     position: relative;
-    z-index: 1;
 }
 
-/* ─── Alerts (Django messages) ─────────────────────────────── */
+.page-header {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 24px 0;
+}
+
+.page-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.page-subtitle {
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+/* --- Alerts (Django messages) --------------------------------------------- */
+/* Fixed and centred: the navbar is absent for anonymous users, so a corner
+   alert would strand login errors in the corner of an empty auth page. Staying
+   fixed also keeps the room page's height calculation intact. */
 .messages-container {
     position: fixed;
-    top: 64px;
-    right: 24px;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 200;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 400px;
+    width: calc(100% - 32px);
+    max-width: 26rem;
 }
 
 .alert {
-    padding: 12px 16px;
-    border-radius: var(--radius-md);
-    font-size: 0.85rem;
-    font-weight: 500;
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    animation: slideInRight 0.3s ease-out;
-    transition: all 0.3s ease;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text-muted);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-md);
+    font-size: 0.8125rem;
+    color: var(--text);
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.alert-error {
-    background: var(--danger-soft);
-    border-color: rgba(248, 113, 113, 0.2);
-    color: var(--danger);
-}
-
-.alert-success {
-    background: var(--success-soft);
-    border-color: rgba(52, 211, 153, 0.2);
-    color: var(--success);
-}
-
-.alert-info {
-    background: rgba(96, 165, 250, 0.12);
-    border-color: rgba(96, 165, 250, 0.2);
-    color: var(--info);
-}
+.alert-error   { border-left-color: var(--red); }
+.alert-success { border-left-color: var(--green); }
+.alert-info    { border-left-color: var(--azure); }
+.alert-warning { border-left-color: var(--yellow); }
+.alert-debug   { border-left-color: var(--text-muted); }
 
 .alert-close {
-    background: none;
+    flex-shrink: 0;
+    padding: 0;
     border: none;
-    color: inherit;
-    opacity: 0.6;
-    cursor: pointer;
-    font-size: 1.2rem;
+    background: none;
+    color: var(--text-muted);
+    font-size: 1.125rem;
     line-height: 1;
+    cursor: pointer;
 }
 
-/* ─── Auth Pages ───────────────────────────────────────────── */
+.alert-close:hover {
+    color: var(--text);
+}
+
+/* --- Auth pages ----------------------------------------------------------- */
 .auth-container {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    padding: 24px;
+    padding: 32px 16px;
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    color: var(--text);
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.auth-brand:hover {
+    color: var(--text);
+    text-decoration: none;
+}
+
+.auth-brand svg {
+    color: var(--primary);
 }
 
 .auth-card {
     width: 100%;
-    max-width: 420px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    padding: 40px;
-    box-shadow: var(--shadow-lg);
-    animation: fadeInUp 0.5s ease-out;
-}
-
-.auth-header {
-    text-align: center;
-    margin-bottom: 32px;
-}
-
-.auth-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 64px;
-    height: 64px;
-    border-radius: var(--radius-lg);
-    background: var(--accent-soft);
-    color: var(--accent);
-    margin-bottom: 16px;
+    max-width: 26rem;
+    padding: 24px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
 }
 
 .auth-title {
-    font-size: 1.65rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 6px;
-}
-
-.auth-subtitle {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
+    margin-bottom: 20px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-align: center;
 }
 
 .auth-form {
@@ -326,70 +312,121 @@ a:hover {
     gap: 16px;
 }
 
+.auth-form .btn {
+    margin-top: 4px;
+}
+
 .auth-footer {
-    margin-top: 24px;
+    width: 100%;
+    max-width: 26rem;
+    margin-top: 20px;
     text-align: center;
-    font-size: 0.85rem;
+    font-size: 0.8125rem;
     color: var(--text-secondary);
 }
 
 .auth-link {
-    color: var(--accent);
-    font-weight: 600;
+    font-weight: 500;
 }
 
-/* ─── Forms ────────────────────────────────────────────────── */
+/* --- Forms ---------------------------------------------------------------- */
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
 }
 
 .form-label {
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.8125rem;
+    font-weight: 500;
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .form-input {
     width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--bg-base);
-    color: var(--text-primary);
+    padding: 8px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    color: var(--text);
     font-family: var(--font);
-    font-size: 0.9rem;
-    transition: all var(--transition-fast);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     outline: none;
 }
 
 .form-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
+    border-color: #90b5e2;
+    box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.18);
 }
 
 .form-input::placeholder {
-    color: var(--text-muted);
+    color: #9aa4b2;
+}
+
+.form-input.is-invalid {
+    border-color: var(--red);
+}
+
+.form-input.is-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(214, 57, 57, 0.15);
 }
 
 textarea.form-input {
     resize: vertical;
-    min-height: 60px;
+    min-height: 64px;
+}
+
+/* Room codes are stored uppercase; the placeholder must not be uppercased too. */
+.input-upper {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.input-upper::placeholder {
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+/* Input with a trailing button (password reveal) */
+.input-action-wrap {
+    position: relative;
+    display: flex;
+}
+
+.input-action-wrap .form-input {
+    padding-right: 40px;
+}
+
+.input-action-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 100%;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.input-action-btn:hover {
+    color: var(--text);
 }
 
 .form-error {
-    font-size: 0.8rem;
-    color: var(--danger);
-    margin-top: 2px;
+    font-size: 0.8125rem;
+    color: var(--red);
 }
 
 .form-help {
     font-size: 0.75rem;
     color: var(--text-muted);
-    line-height: 1.4;
 }
 
 .form-row {
@@ -399,6 +436,17 @@ textarea.form-input {
 
 .form-group-half {
     flex: 1;
+    min-width: 0;
+}
+
+.stack-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stack-form .btn {
+    margin-top: 4px;
 }
 
 .inline-form {
@@ -408,192 +456,199 @@ textarea.form-input {
 
 .inline-form .form-input {
     flex: 1;
+    min-width: 0;
 }
 
-/* ─── Buttons ──────────────────────────────────────────────── */
+/* --- Buttons -------------------------------------------------------------- */
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: var(--radius-md);
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
     font-family: var(--font);
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    text-decoration: none;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.25;
     white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--transition-fast), border-color var(--transition-fast),
+                color var(--transition-fast);
 }
 
-.btn:active {
-    transform: scale(0.97);
+.btn:hover {
+    text-decoration: none;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--accent), #6246ea);
-    color: white;
-    box-shadow: var(--shadow-sm), 0 0 16px var(--accent-glow);
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--accent-hover), #7c5cfc);
-    box-shadow: var(--shadow-md), 0 0 24px var(--accent-glow);
-    transform: translateY(-1px);
-    color: white;
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: #fff;
 }
 
 .btn-accent {
-    background: linear-gradient(135deg, var(--accent2), #14b8a6);
-    color: var(--text-inverse);
-    box-shadow: var(--shadow-sm);
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #fff;
 }
 
 .btn-accent:hover {
-    background: linear-gradient(135deg, var(--accent2-hover), #2dd4bf);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
-    color: var(--text-inverse);
+    background: #0b8f68;
+    border-color: #0b8f68;
+    color: #fff;
 }
 
 .btn-success {
-    background: var(--success-soft);
-    color: var(--success);
-    border: 1px solid rgba(52, 211, 153, 0.2);
+    background: var(--green-soft);
+    border-color: #bce3c4;
+    color: #1f7a2e;
 }
 
 .btn-success:hover {
-    background: rgba(52, 211, 153, 0.2);
+    background: #dcf0e0;
+    color: #1f7a2e;
 }
 
 .btn-danger {
-    background: var(--danger-soft);
-    color: var(--danger);
-    border: 1px solid rgba(248, 113, 113, 0.2);
+    background: var(--red-soft);
+    border-color: #f0c8c8;
+    color: #b62c2c;
 }
 
 .btn-danger:hover {
-    background: rgba(248, 113, 113, 0.2);
+    background: #f7dede;
+    color: #b62c2c;
 }
 
 .btn-ghost {
-    background: transparent;
+    background: var(--bg-surface);
+    border-color: var(--border-strong);
     color: var(--text-secondary);
-    border: 1px solid var(--border);
 }
 
 .btn-ghost:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-    border-color: var(--border-hover);
+    background: var(--bg-subtle);
+    color: var(--text);
 }
 
 .btn-sm {
-    padding: 5px 12px;
+    padding: 5px 10px;
     font-size: 0.75rem;
-    border-radius: var(--radius-sm);
 }
 
 .btn-full {
     width: 100%;
 }
 
-/* ─── Cards (Glassmorphism) ────────────────────────────────── */
-.card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    transition: border-color var(--transition-base), box-shadow var(--transition-base);
-    animation: fadeInUp 0.4s ease-out;
+.btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
-.card:hover {
-    border-color: var(--border-hover);
-    box-shadow: var(--shadow-md);
+/* --- Cards ---------------------------------------------------------------- */
+.card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
 }
 
 .card-header {
-    padding: 16px 20px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border);
 }
 
 .card-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .card-title svg {
-    color: var(--accent);
+    color: var(--text-muted);
 }
 
 .card-body {
-    padding: 16px 20px;
+    padding: 14px 16px;
 }
 
-/* ─── Badges ───────────────────────────────────────────────── */
+/* --- Badges --------------------------------------------------------------- */
 .badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 20px;
-    height: 20px;
+    min-width: 18px;
+    height: 18px;
     padding: 0 6px;
     border-radius: var(--radius-full);
-    background: var(--accent);
-    color: white;
-    font-size: 0.7rem;
-    font-weight: 700;
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
 }
 
-/* ─── Avatars ──────────────────────────────────────────────── */
+/* --- Avatars (initials; there is no avatar field on the user model) -------- */
 .avatar {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-full);
-    font-weight: 700;
-    text-transform: uppercase;
-    background: linear-gradient(135deg, var(--accent), #6246ea);
-    color: white;
     flex-shrink: 0;
+    border-radius: var(--radius);
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 600;
+    text-transform: uppercase;
 }
 
 .avatar-sm {
-    width: 32px;
-    height: 32px;
-    font-size: 0.8rem;
+    width: 30px;
+    height: 30px;
+    font-size: 0.75rem;
 }
 
 .avatar-md {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
+    width: 38px;
+    height: 38px;
+    font-size: 0.9375rem;
 }
 
 .avatar-room {
-    background: linear-gradient(135deg, var(--accent2), #14b8a6);
+    background: var(--teal-soft);
+    color: var(--teal);
 }
 
-/* ─── List Items ───────────────────────────────────────────── */
+/* --- List items ----------------------------------------------------------- */
 .list-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 0;
+    gap: 12px;
+    padding: 9px 0;
     border-bottom: 1px solid var(--border);
-    animation: fadeIn 0.3s ease-out;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.list-item:first-child {
+    padding-top: 0;
 }
 
 .list-item:last-child {
+    padding-bottom: 0;
     border-bottom: none;
 }
 
@@ -601,8 +656,8 @@ textarea.form-input {
     display: flex;
     align-items: center;
     gap: 10px;
-    min-width: 0;
     flex: 1;
+    min-width: 0;
 }
 
 .list-item-details {
@@ -613,8 +668,8 @@ textarea.form-input {
 
 .list-item-name {
     font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-primary);
+    font-weight: 500;
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -622,10 +677,14 @@ textarea.form-input {
 
 .list-item-status {
     font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .status-online {
-    color: var(--success);
+    color: var(--green);
 }
 
 .status-offline {
@@ -639,68 +698,79 @@ textarea.form-input {
 }
 
 .empty-state {
-    padding: 16px 0;
+    padding: 12px 0;
     text-align: center;
 }
 
 .empty-state p {
-    font-size: 0.825rem;
+    font-size: 0.8125rem;
     color: var(--text-muted);
 }
 
-/* ─── Dashboard ────────────────────────────────────────────── */
+/* --- Dashboard ------------------------------------------------------------ */
 .dashboard {
-    max-width: 1100px;
+    max-width: 1180px;
     margin: 0 auto;
-    padding: 32px 24px;
+    padding: 20px 24px 32px;
 }
 
+/* Rooms are the primary column; friends sit in a narrower rail. */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
 }
 
 .dashboard-column {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-width: 0;
 }
 
-/* ─── Room Page ────────────────────────────────────────────── */
+/* Join and Create sit side by side; their field counts differ, so they are
+   top-aligned rather than stretched to a shared height. */
+.dashboard-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+/* --- Room page shell ------------------------------------------------------ */
 .room-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 56px);
+    height: calc(100vh - var(--nav-height));
 }
 
 .room-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 24px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    border-bottom: 1px solid var(--glass-border);
     gap: 16px;
+    padding: 10px 20px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
 }
 
 .room-header-info {
-    min-width: 0;
     flex: 1;
+    min-width: 0;
 }
 
 .room-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-primary);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .room-description {
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
@@ -718,80 +788,83 @@ textarea.form-input {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 12px;
-    border-radius: var(--radius-full);
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-size: 0.8rem;
-    font-weight: 700;
-    font-family: monospace;
+    padding: 4px 9px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .room-code-badge:hover {
-    background: var(--accent-glow);
+    background: var(--bg-sunken);
+    color: var(--text);
 }
 
 .room-capacity {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     color: var(--text-secondary);
 }
 
-/* Room body layout */
 .room-body {
     display: flex;
     flex: 1;
     overflow: hidden;
 }
 
-/* ─── Sidebar (Active Users) ──────────────────────────────── */
+/* --- Sidebar (members, invites, owner controls) --------------------------- */
 .sidebar {
-    width: 240px;
-    background: var(--bg-surface);
-    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
     flex-shrink: 0;
+    width: 260px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
 }
 
 .sidebar-header {
-    padding: 16px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--border);
 }
 
 .sidebar-title {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.sidebar-title svg {
+    color: var(--text-muted);
 }
 
 .sidebar-section {
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
 }
 
 .sidebar-section-title {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     margin-bottom: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
 }
 
+/* Grows to fill the sidebar so the invite and owner sections stay pinned below. */
 .sidebar-users {
     flex: 1;
-    padding: 8px 0;
+    min-height: 0;
+    padding: 6px 0;
     overflow-y: auto;
 }
 
@@ -799,47 +872,51 @@ textarea.form-input {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px;
-    transition: background var(--transition-fast);
     gap: 8px;
+    padding: 6px 16px;
+    transition: background var(--transition-fast);
 }
 
 .sidebar-user:hover {
-    background: var(--bg-hover);
+    background: var(--bg-subtle);
 }
 
 .sidebar-user-info {
     display: flex;
     align-items: center;
-    gap: 10px;
-    min-width: 0;
+    gap: 9px;
     flex: 1;
+    min-width: 0;
 }
 
 .sidebar-user-name {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-primary);
+    font-size: 0.8125rem;
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .sidebar-user-name .owner-badge {
-    margin-left: 4px;
-    font-size: 0.65rem;
-    color: var(--warning);
-    font-weight: 700;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    background: var(--yellow-soft);
+    color: #a06800;
+    font-size: 0.6875rem;
+    font-weight: 600;
 }
 
 .sidebar-user-actions {
     display: flex;
-    gap: 4px;
+    gap: 2px;
+    flex-shrink: 0;
     opacity: 0;
     transition: opacity var(--transition-fast);
 }
 
-.sidebar-user:hover .sidebar-user-actions {
+.sidebar-user:hover .sidebar-user-actions,
+.sidebar-user:focus-within .sidebar-user-actions {
     opacity: 1;
 }
 
@@ -850,96 +927,104 @@ textarea.form-input {
     width: 26px;
     height: 26px;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius);
     background: transparent;
-    cursor: pointer;
-    transition: all var(--transition-fast);
     color: var(--text-muted);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .sidebar-user-btn:hover {
-    background: var(--bg-active);
-    color: var(--text-primary);
+    background: var(--bg-sunken);
+    color: var(--text);
 }
 
 .sidebar-user-btn.btn-kick:hover {
-    background: var(--danger-soft);
-    color: var(--danger);
+    background: var(--red-soft);
+    color: var(--red);
 }
 
 .sidebar-user-btn.btn-transfer:hover {
-    background: rgba(251, 191, 36, 0.12);
-    color: var(--warning);
+    background: var(--yellow-soft);
+    color: #a06800;
 }
 
-/* Online indicator */
 .online-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: var(--success);
-    box-shadow: 0 0 6px var(--success);
+    background: var(--green);
     flex-shrink: 0;
 }
 
-/* Owner controls section */
+/* Pinned to the bottom of the sidebar. room.js toggles this via style.display,
+   so it must not rely on a display value set here. */
 .owner-controls {
     margin-top: auto;
-    border-top: 1px solid var(--border);
-    border-bottom: none;
 }
 
-/* ─── Invite Friend List ───────────────────────────────────── */
+/* --- Invite a friend list ------------------------------------------------- */
+.invite-friend-list {
+    max-height: 11rem;
+    overflow-y: auto;
+}
+
 .invite-friend-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 0;
+    gap: 8px;
+    padding: 4px 0;
 }
 
 .invite-friend-name {
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .invite-btn {
-    padding: 3px 10px;
-    font-size: 0.7rem;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--accent);
-    cursor: pointer;
+    flex-shrink: 0;
+    padding: 3px 9px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    color: var(--primary);
     font-family: var(--font);
-    font-weight: 600;
-    transition: all var(--transition-fast);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
-.invite-btn:hover {
-    background: var(--accent-soft);
-    border-color: var(--border-accent);
+.invite-btn:hover:not(:disabled) {
+    background: var(--primary-soft);
+    border-color: var(--primary-border);
 }
 
 .invite-btn:disabled {
-    opacity: 0.4;
+    color: var(--text-muted);
     cursor: not-allowed;
 }
 
-/* ─── Chat Area ────────────────────────────────────────────── */
+/* --- Chat area ------------------------------------------------------------ */
 .chat-area {
-    flex: 1;
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-width: 0;
 }
 
 .chat-messages {
     flex: 1;
-    overflow-y: auto;
-    padding: 16px 24px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 6px;
+    padding: 20px 24px;
+    background: var(--bg-page);
+    overflow-y: auto;
 }
 
 .chat-welcome {
@@ -947,110 +1032,135 @@ textarea.form-input {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 10px;
     height: 100%;
-    text-align: center;
-    color: var(--text-muted);
-    gap: 12px;
     padding: 40px;
+    text-align: center;
 }
 
 .chat-welcome-icon {
-    color: var(--accent);
-    opacity: 0.3;
+    color: #c3cad6;
 }
 
 .chat-welcome h3 {
-    font-size: 1.1rem;
-    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .chat-welcome p {
-    font-size: 0.85rem;
-    max-width: 400px;
+    max-width: 26rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
 }
 
-/* ─── Chat Messages ────────────────────────────────────────── */
+/* --- Messages ------------------------------------------------------------- */
+/* Structure is fixed by room.js appendMessage() and the server-rendered loop in
+   room.html: .message > .message-avatar + .message-body + .message-actions.
+   .message-me is added when the sender is the current user. */
 .message {
     display: flex;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: var(--radius-md);
-    transition: background var(--transition-fast);
-    animation: messageSlideIn 0.25s ease-out;
-    position: relative;
+    align-items: flex-end;
+    gap: 10px;
+    animation: fadeIn 0.15s ease-out;
 }
 
-.message:hover {
-    background: var(--bg-hover);
-}
-
-.message:hover .message-actions {
-    opacity: 1;
+.message-me {
+    flex-direction: row-reverse;
 }
 
 .message-avatar {
-    flex-shrink: 0;
-    margin-top: 2px;
+    margin-bottom: 2px;
 }
 
 .message-body {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: min(34rem, 75%);
 }
 
 .message-header {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
+    padding: 0 2px;
+}
+
+.message-me .message-header {
+    justify-content: flex-end;
 }
 
 .message-sender {
-    font-size: 0.85rem;
+    font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--text);
+}
+
+/* Your own name above your own bubble adds nothing. */
+.message-me .message-sender {
+    display: none;
 }
 
 .message-time {
-    font-size: 0.7rem;
+    font-size: 0.6875rem;
     color: var(--text-muted);
 }
 
 .message-edited {
-    font-size: 0.65rem;
+    font-size: 0.6875rem;
     color: var(--text-muted);
-    font-style: italic;
 }
 
 .message-content {
-    font-size: 0.9rem;
-    color: var(--text-primary);
-    line-height: 1.5;
-    word-wrap: break-word;
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-bubble) var(--radius-bubble) var(--radius-bubble) var(--radius);
+    background: var(--bg-surface);
+    font-size: 0.875rem;
+    color: var(--text);
+    overflow-wrap: anywhere;
 }
 
-.message-deleted .message-content {
+.message-me .message-content {
+    border-color: transparent;
+    border-radius: var(--radius-bubble) var(--radius-bubble) var(--radius) var(--radius-bubble);
+    background: var(--primary);
+    color: #fff;
+}
+
+/* Deleted messages are styled from the class alone — room.js must not set an
+   inline colour here, or it would be unreadable on the blue own-message bubble. */
+.message-deleted .message-content,
+.message-me.message-deleted .message-content {
+    background: transparent;
+    border: 1px dashed var(--border-strong);
     color: var(--text-muted);
     font-style: italic;
 }
 
-/* Reply preview above message */
+/* The quoted preview is a SIBLING of .message-content, not a child of it — it
+   sits above the bubble on the page background, so it stays light on both
+   sides. Only the accent edge changes to tie it to the bubble below it. */
 .message-reply-preview {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 6px;
-    padding: 4px 8px;
+    width: fit-content;
+    max-width: 100%;
     margin-bottom: 4px;
-    border-left: 2px solid var(--accent);
-    background: var(--accent-soft);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 3px 9px;
+    border-left: 2px solid var(--border-strong);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    background: var(--bg-subtle);
     font-size: 0.75rem;
     color: var(--text-secondary);
 }
 
 .message-reply-preview .reply-user {
+    flex-shrink: 0;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--text);
 }
 
 .message-reply-preview .reply-text {
@@ -1059,219 +1169,229 @@ textarea.form-input {
     text-overflow: ellipsis;
 }
 
-/* Message action buttons (appear on hover) */
+.message-me .message-reply-preview {
+    margin-left: auto;
+    border-left-color: var(--primary);
+    background: var(--primary-soft);
+}
+
+/* In flow rather than absolute, so the buttons always sit beside the bubble on
+   whichever side it is on (row-reverse flips them for .message-me). */
 .message-actions {
-    position: absolute;
-    top: -8px;
-    right: 8px;
     display: flex;
+    align-self: center;
     gap: 2px;
-    opacity: 0;
-    transition: opacity var(--transition-fast);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    flex-shrink: 0;
     padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
     box-shadow: var(--shadow-sm);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-fast);
+}
+
+.message:hover .message-actions,
+.message:focus-within .message-actions {
+    opacity: 1;
+    visibility: visible;
 }
 
 .message-action-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border: none;
     border-radius: var(--radius-sm);
     background: transparent;
-    cursor: pointer;
     color: var(--text-muted);
-    transition: all var(--transition-fast);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .message-action-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
+    background: var(--bg-subtle);
 }
 
-.message-action-btn.btn-reply:hover {
-    color: var(--accent);
-}
+.message-action-btn.btn-reply:hover { color: var(--primary); }
+.message-action-btn.btn-edit:hover  { color: var(--azure); }
+.message-action-btn.btn-delete:hover { color: var(--red); }
 
-.message-action-btn.btn-edit:hover {
-    color: var(--info);
-}
-
-.message-action-btn.btn-delete:hover {
-    color: var(--danger);
-}
-
-/* System message (join/leave notifications) */
+/* Join / leave / kick / ownership notices. room.js sets .innerHTML on this
+   element directly, so the pill has to be the element itself. */
 .system-message {
+    width: fit-content;
+    max-width: 100%;
+    margin: 4px auto;
+    padding: 3px 12px;
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
     text-align: center;
-    padding: 6px 0;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.2s ease-out;
 }
 
 .system-message .highlight {
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text);
 }
 
-/* ─── Reply & Edit Bars ────────────────────────────────────── */
+/* --- Reply / edit bars ---------------------------------------------------- */
 .reply-bar, .edit-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 24px;
-    background: var(--bg-elevated);
-    border-top: 2px solid var(--accent);
-    animation: slideUp 0.2s ease-out;
+    gap: 12px;
+    padding: 8px 20px;
+    border-top: 1px solid var(--border);
+    border-left: 3px solid var(--primary);
+    background: var(--primary-soft);
 }
 
 .edit-bar {
-    border-top-color: var(--info);
+    border-left-color: var(--azure);
+    background: var(--azure-soft);
 }
 
 .reply-bar-content, .edit-bar-content {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 8px;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    min-width: 0;
     flex: 1;
+    min-width: 0;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
 }
 
 .reply-bar-label, .edit-bar-label {
+    flex-shrink: 0;
     font-weight: 600;
-    color: var(--accent);
-    white-space: nowrap;
+    color: var(--primary);
 }
 
 .edit-bar-label {
-    color: var(--info);
+    color: #2c7cb8;
 }
 
 .reply-bar-user {
+    flex-shrink: 0;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text);
 }
 
 .reply-bar-text {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--text-muted);
 }
 
 .reply-bar-close, .edit-bar-close {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     width: 24px;
     height: 24px;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius);
     background: transparent;
+    color: var(--text-secondary);
+    font-size: 1.125rem;
+    line-height: 1;
     cursor: pointer;
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    transition: all var(--transition-fast);
-    flex-shrink: 0;
 }
 
 .reply-bar-close:hover, .edit-bar-close:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
+    background: rgba(29, 39, 59, 0.07);
+    color: var(--text);
 }
 
-/* ─── Chat Input ───────────────────────────────────────────── */
+/* --- Composer ------------------------------------------------------------- */
 .chat-input-container {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 24px 16px;
+    padding: 12px 20px;
     background: var(--bg-surface);
     border-top: 1px solid var(--border);
 }
 
 .chat-input {
     flex: 1;
-    padding: 12px 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--bg-base);
-    color: var(--text-primary);
+    min-width: 0;
+    padding: 9px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    color: var(--text);
     font-family: var(--font);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     outline: none;
-    transition: all var(--transition-fast);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .chat-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
+    border-color: #90b5e2;
+    box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.18);
 }
 
 .chat-input::placeholder {
-    color: var(--text-muted);
+    color: #9aa4b2;
 }
 
 .chat-send-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    border: none;
-    border-radius: var(--radius-lg);
-    background: linear-gradient(135deg, var(--accent), #6246ea);
-    color: white;
-    cursor: pointer;
-    transition: all var(--transition-fast);
     flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    transition: background var(--transition-fast);
 }
 
 .chat-send-btn:hover {
-    transform: scale(1.05);
-    box-shadow: var(--shadow-glow);
+    background: var(--primary-hover);
 }
 
-.chat-send-btn:active {
-    transform: scale(0.95);
-}
-
-/* ─── Toast Notifications ──────────────────────────────────── */
+/* --- Toasts --------------------------------------------------------------- */
+/* showToast() in base.html adds .toast, then .toast-visible on the next frame,
+   and removes the node 300ms after dropping .toast-visible. The hidden state and
+   the <=300ms transition below are load-bearing. */
 .toast-container {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: 20px;
+    right: 20px;
     z-index: 300;
     display: flex;
     flex-direction: column-reverse;
     gap: 8px;
-    max-width: 380px;
+    max-width: 22rem;
 }
 
 .toast {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
-    padding: 12px 16px;
-    border-radius: var(--radius-md);
-    background: var(--bg-elevated);
-    border: 1px solid var(--glass-border);
-    backdrop-filter: blur(12px);
+    padding: 11px 13px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text-muted);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
     box-shadow: var(--shadow-lg);
-    font-size: 0.825rem;
-    font-weight: 500;
-    color: var(--text-primary);
+    font-size: 0.8125rem;
+    color: var(--text);
     transform: translateX(120%);
     opacity: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
 .toast-visible {
@@ -1279,109 +1399,71 @@ textarea.form-input {
     opacity: 1;
 }
 
-.toast-success {
-    border-left: 3px solid var(--success);
-}
-
-.toast-error {
-    border-left: 3px solid var(--danger);
-}
-
-.toast-info {
-    border-left: 3px solid var(--info);
-}
-
-.toast-warning {
-    border-left: 3px solid var(--warning);
-}
+.toast-success { border-left-color: var(--green); }
+.toast-error   { border-left-color: var(--red); }
+.toast-info    { border-left-color: var(--azure); }
+.toast-warning { border-left-color: var(--yellow); }
 
 .toast-message {
     flex: 1;
 }
 
 .toast-close {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 1.1rem;
-    line-height: 1;
+    flex-shrink: 0;
     padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 1.125rem;
+    line-height: 1;
+    cursor: pointer;
 }
 
-/* ─── Animations ───────────────────────────────────────────── */
+.toast-close:hover {
+    color: var(--text);
+}
+
+/* --- Animation ------------------------------------------------------------ */
 @keyframes fadeIn {
     from { opacity: 0; }
-    to { opacity: 1; }
+    to   { opacity: 1; }
 }
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(16px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
     }
 }
 
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(24px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes messageSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* ─── Responsive ───────────────────────────────────────────── */
-@media (max-width: 768px) {
+/* --- Responsive ----------------------------------------------------------- */
+@media (max-width: 992px) {
     .dashboard-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-pair {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .sidebar {
-        width: 200px;
+        width: 210px;
     }
 
     .room-header {
         flex-direction: column;
         align-items: flex-start;
+        gap: 8px;
     }
 
     .room-header-meta {
         width: 100%;
-        justify-content: flex-start;
+    }
+
+    .message-body {
+        max-width: 85%;
     }
 }
 
@@ -1391,14 +1473,29 @@ textarea.form-input {
     }
 
     .navbar {
-        padding: 0 16px;
+        padding: 0 14px;
     }
 
-    .nav-actions {
-        gap: 8px;
+    .nav-user {
+        padding-right: 0;
+        margin-right: 0;
+        border-right: none;
+    }
+
+    .nav-username {
+        display: none;
+    }
+
+    .page-header, .dashboard {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .chat-messages {
+        padding: 14px 16px;
     }
 
     .chat-input-container {
-        padding: 10px 16px 14px;
+        padding: 10px 16px;
     }
 }

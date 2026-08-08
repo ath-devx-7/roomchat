@@ -138,14 +138,41 @@ function handleChatMessage(data) {
 }
 
 // ─── Helpers: Time formatting ──────────────────────────────
+/**
+ * Short label for a message timestamp: the clock alone for today, plus the date
+ * once the message is older. The full timestamp goes in the title attribute.
+ */
 function formatTime(isoString) {
     const d = new Date(isoString);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
+    const now = new Date();
+    const clock = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const sameDay = d.toDateString() === now.toDateString();
+    if (sameDay) return clock;
+
+    const sameYear = d.getFullYear() === now.getFullYear();
+    const date = d.toLocaleDateString([], sameYear
+        ? { month: 'short', day: 'numeric' }
+        : { year: 'numeric', month: 'short', day: 'numeric' });
+    return `${date}, ${clock}`;
+}
+
+function formatFullTime(isoString) {
+    return new Date(isoString).toLocaleString();
+}
+
+/**
+ * The server renders history with an absolute timestamp and the ISO value in
+ * data-utc. Rewrite those through formatTime so page-load and live messages
+ * read identically, and so times land in the reader's own timezone.
+ */
+function localizeRenderedTimes() {
+    document.querySelectorAll('.message-time[data-utc]').forEach(el => {
+        const iso = el.getAttribute('data-utc');
+        if (!iso) return;
+        el.textContent = formatTime(iso);
+        el.title = formatFullTime(iso);
+    });
 }
 
 // ─── DOM Message Rendering ──────────────────────────────────
@@ -160,7 +187,9 @@ function appendMessage(data) {
     const msgId = data.message_id;
 
     const msgDiv = document.createElement('div');
-    msgDiv.className = 'message';
+    // .message-me right-aligns the bubble; the server-rendered loop in room.html
+    // sets the same class from {% if msg.sender == user %}.
+    msgDiv.className = isMe ? 'message message-me' : 'message';
     msgDiv.id = `message-${msgId}`;
     msgDiv.setAttribute('data-message-id', msgId);
 
@@ -215,7 +244,7 @@ function appendMessage(data) {
         <div class="message-body">
             <div class="message-header">
                 <span class="message-sender">${senderEscaped}</span>
-                <span class="message-time">${timeFormatted}</span>
+                <span class="message-time" data-utc="${escapeHTML(data.created_at)}" title="${escapeHTML(formatFullTime(data.created_at))}">${timeFormatted}</span>
                 <span class="message-edited" style="display:none;">(edited)</span>
             </div>
             ${replyPreviewHTML}
@@ -258,11 +287,11 @@ function deleteMessageDOM(messageId) {
 
     msgDiv.classList.add('message-deleted');
     
+    // Styling comes from .message-deleted alone. An inline colour here would win
+    // over the stylesheet and be unreadable on the filled own-message bubble.
     const contentDiv = msgDiv.querySelector('.message-content');
     if (contentDiv) {
         contentDiv.textContent = 'This message was deleted.';
-        contentDiv.style.fontStyle = 'italic';
-        contentDiv.style.color = 'var(--text-muted)';
     }
 
     // Remove action buttons and reply preview
@@ -581,6 +610,7 @@ function escapeJSString(str) {
 
 // ─── Initializer ────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    localizeRenderedTimes();
     connectChatSocket();
     fetchFriends();
     scrollToBottom();

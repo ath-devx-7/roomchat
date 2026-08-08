@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="RoomChat - Realtime room-based chat application">
+    <meta name="color-scheme" content="light">
     <title>{% block title %}RoomChat{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,11 +26,8 @@
         </div>
         <div class="nav-actions">
             <span class="nav-user">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                {{ user.username }}
+                <span class="avatar avatar-sm">{{ user.username|first|upper }}</span>
+                <span class="nav-username">{{ user.username }}</span>
             </span>
             <a href="{% url 'dashboard' %}" class="nav-link" id="nav-dashboard">Dashboard</a>
             <a href="{% url 'logout' %}" class="nav-link nav-logout" id="nav-logout">Logout</a>

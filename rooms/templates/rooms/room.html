@@ -52,29 +52,30 @@
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                     </svg>
-                    Online
+                    In this room
                     <span class="badge" id="online-count-badge">0</span>
                 </h2>
-            </div>
-
-            <!-- Invite Friend Section -->
-            <div class="sidebar-section" id="invite-section">
-                <h3 class="sidebar-section-title">Invite Friend</h3>
-                <div class="invite-friend-list" id="invite-friend-list">
-                    <!-- Populated by JS -->
-                </div>
             </div>
 
             <div class="sidebar-users" id="active-users-list">
                 <!-- Populated by WebSocket -->
             </div>
 
-            <!-- Owner Controls -->
-            <div class="sidebar-section owner-controls" id="owner-controls" style="display:none;">
-                <h3 class="sidebar-section-title">Owner Controls</h3>
+            <!-- Invite Friend Section -->
+            <div class="sidebar-section" id="invite-section">
+                <h3 class="sidebar-section-title">Invite a friend</h3>
+                <div class="invite-friend-list" id="invite-friend-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Owner Controls. room.js re-toggles this from the room_info event;
+                 the server-side default just avoids a flash on load. -->
+            <div class="sidebar-section owner-controls" id="owner-controls" style="display:{% if is_owner %}block{% else %}none{% endif %};">
+                <h3 class="sidebar-section-title">Owner controls</h3>
                 <button class="btn btn-sm btn-danger btn-full" id="delete-room-btn" onclick="deleteRoom()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    Delete Room
+                    Delete room
                 </button>
             </div>
         </aside>
@@ -85,16 +86,16 @@
                 {% if not messages_history %}
                 <div class="chat-welcome" id="chat-welcome">
                     <div class="chat-welcome-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                         </svg>
                     </div>
-                    <h3>Welcome to {{ room.name }}</h3>
-                    <p>Messages will appear here as they are sent. You're starting with a clean slate!</p>
+                    <h3>No messages yet in {{ room.name }}</h3>
+                    <p>Send the room code to a friend, or say something to get things started.</p>
                 </div>
                 {% else %}
                     {% for msg in messages_history %}
-                    <div class="message {% if msg.is_deleted %}message-deleted{% endif %}" id="message-{{ msg.id }}" data-message-id="{{ msg.id }}">
+                    <div class="message{% if msg.sender == user %} message-me{% endif %}{% if msg.is_deleted %} message-deleted{% endif %}" id="message-{{ msg.id }}" data-message-id="{{ msg.id }}">
                         <div class="avatar avatar-sm message-avatar">{{ msg.sender.username|first|upper }}</div>
                         <div class="message-body">
                             <div class="message-header">
@@ -163,9 +164,9 @@
 
             <!-- Message Input -->
             <div class="chat-input-container" id="chat-input-container">
-                <input type="text" id="message-input" class="chat-input" placeholder="Type a message..." autocomplete="off">
-                <button class="chat-send-btn" id="send-message-btn" onclick="sendMessage()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <input type="text" id="message-input" class="chat-input" placeholder="Write a message..." autocomplete="off">
+                <button class="chat-send-btn" id="send-message-btn" onclick="sendMessage()" title="Send" aria-label="Send message">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                     </svg>

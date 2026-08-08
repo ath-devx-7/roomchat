@@ -158,6 +158,25 @@ function updateInvitationCount() {
     }
 }
 
+// ─── Friend Request UI ──────────────────────────────────────
+
+function updateFriendRequestCount() {
+    const list = document.getElementById('friend-requests-list');
+    const badge = document.getElementById('friend-requests-count');
+    if (!list || !badge) return;
+
+    const count = list.querySelectorAll('.list-item').length;
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+        if (!list.querySelector('.empty-state')) {
+            list.innerHTML = '<div class="empty-state" id="no-friend-requests"><p>No pending requests</p></div>';
+        }
+    }
+}
+
 // ─── Friend System (AJAX) ───────────────────────────────────
 
 /**
@@ -228,7 +247,11 @@ function rejectFriendRequest(friendshipId) {
             const item = document.getElementById(`friend-request-${friendshipId}`);
             if (item) {
                 item.style.opacity = '0';
-                setTimeout(() => item.remove(), 300);
+                item.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    item.remove();
+                    updateFriendRequestCount();
+                }, 300);
             }
         })
         .catch(err => showToast(err.message, 'error'));
@@ -253,6 +276,7 @@ function removeFriend(friendshipId) {
 document.addEventListener('DOMContentLoaded', () => {
     connectNotificationSocket();
     updateInvitationCount();
+    updateFriendRequestCount();
 
     const friendInput = document.getElementById('friend-username-input');
     if (friendInput) {

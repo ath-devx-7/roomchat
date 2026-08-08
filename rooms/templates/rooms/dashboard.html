@@ -4,10 +4,129 @@
 {% block title %}Dashboard — RoomChat{% endblock %}
 
 {% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Join a room with its code, start your own, or invite a friend along.</p>
+</div>
+
 <div class="dashboard" id="dashboard-page">
     <div class="dashboard-grid">
 
-        <!-- LEFT COLUMN: Friends & Requests -->
+        <!-- PRIMARY COLUMN: Rooms -->
+        <div class="dashboard-column">
+
+            <div class="dashboard-pair">
+
+                <!-- Join Room -->
+                <div class="card" id="join-room-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                                <polyline points="10 17 15 12 10 7"></polyline>
+                                <line x1="15" y1="12" x2="3" y2="12"></line>
+                            </svg>
+                            Join a room
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'join_room' %}" id="join-room-form" class="stack-form">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label class="form-label" for="id_room_code">Room code</label>
+                                <input type="text" name="room_code" id="id_room_code" class="form-input input-upper" placeholder="e.g. ABC123" maxlength="6" autocomplete="off" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="id_join_password">Password</label>
+                                <input type="password" name="password" id="id_join_password" class="form-input" placeholder="Only if the room has one">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-full" id="join-room-btn">
+                                Join room
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Create Room -->
+                <div class="card" id="create-room-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="16"></line>
+                                <line x1="8" y1="12" x2="16" y2="12"></line>
+                            </svg>
+                            Create a room
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'create_room' %}" id="create-room-form" class="stack-form">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label class="form-label" for="id_room_name">Name</label>
+                                <input type="text" name="name" id="id_room_name" class="form-input" placeholder="Study group" maxlength="100" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="id_room_description">Description</label>
+                                <textarea name="description" id="id_room_description" class="form-input" placeholder="Optional" rows="2"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group form-group-half">
+                                    <label class="form-label" for="id_capacity">Capacity</label>
+                                    <input type="number" name="capacity" id="id_capacity" class="form-input" min="2" max="100" value="10">
+                                </div>
+                                <div class="form-group form-group-half">
+                                    <label class="form-label" for="id_create_password">Password</label>
+                                    <input type="password" name="password" id="id_create_password" class="form-input" placeholder="Optional">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-full" id="create-room-btn">
+                                Create room
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room Invitations -->
+            <div class="card" id="room-invitations-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                            <path d="M22 7l-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"></path>
+                        </svg>
+                        Room invitations
+                        <span class="badge" id="invitations-count" style="display:none;">0</span>
+                    </h2>
+                </div>
+                <div class="card-body" id="invitations-list">
+                    {% for inv in pending_invitations %}
+                    <div class="list-item invitation-item" id="invitation-{{ inv.id }}">
+                        <div class="list-item-info">
+                            <div class="avatar avatar-sm avatar-room">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            </div>
+                            <div class="list-item-details">
+                                <span class="list-item-name">{{ inv.room.name }}</span>
+                                <span class="list-item-status">from {{ inv.sender.username }}</span>
+                            </div>
+                        </div>
+                        <div class="list-item-actions">
+                            <button class="btn btn-sm btn-success" onclick="acceptRoomInvite({{ inv.id }})">Join</button>
+                            <button class="btn btn-sm btn-danger" onclick="rejectRoomInvite({{ inv.id }})">Decline</button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state" id="no-invitations">
+                        <p>No pending invitations</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- RAIL: Friends -->
         <div class="dashboard-column">
 
             <!-- Add Friend -->
@@ -20,12 +139,12 @@
                             <line x1="20" y1="8" x2="20" y2="14"></line>
                             <line x1="23" y1="11" x2="17" y2="11"></line>
                         </svg>
-                        Add Friend
+                        Add a friend
                     </h2>
                 </div>
                 <div class="card-body">
                     <div class="inline-form">
-                        <input type="text" id="friend-username-input" class="form-input" placeholder="Enter username...">
+                        <input type="text" id="friend-username-input" class="form-input" placeholder="Username" autocomplete="off">
                         <button class="btn btn-primary" id="send-friend-request-btn" onclick="sendFriendRequest()">Send</button>
                     </div>
                 </div>
@@ -36,11 +155,10 @@
                 <div class="card-header">
                     <h2 class="card-title">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="16"></line>
-                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
                         </svg>
-                        Friend Requests
+                        Friend requests
                         <span class="badge" id="friend-requests-count" style="display:none;">0</span>
                     </h2>
                 </div>
@@ -82,7 +200,14 @@
                     <div class="list-item" id="friend-{{ f.friendship_id }}">
                         <div class="list-item-info">
                             <div class="avatar avatar-sm">{{ f.user.username|first|upper }}</div>
-                            <span class="list-item-name">{{ f.user.username }}</span>
+                            <div class="list-item-details">
+                                <span class="list-item-name">{{ f.user.username }}</span>
+                                {% if f.current_room %}
+                                <span class="list-item-status status-online">In {{ f.current_room.name }}</span>
+                                {% else %}
+                                <span class="list-item-status status-offline">Not in a room</span>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="list-item-actions">
                             <button class="btn btn-sm btn-danger" onclick="removeFriend({{ f.friendship_id }})">Remove</button>
@@ -90,130 +215,9 @@
                     </div>
                     {% empty %}
                     <div class="empty-state" id="no-friends">
-                        <p>No friends yet. Add someone above!</p>
+                        <p>No friends yet. Add someone above.</p>
                     </div>
                     {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- RIGHT COLUMN: Rooms -->
-        <div class="dashboard-column">
-
-            <!-- Room Invitations -->
-            <div class="card" id="room-invitations-card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                            <path d="M22 7l-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"></path>
-                        </svg>
-                        Room Invitations
-                        <span class="badge" id="invitations-count" style="display:none;">0</span>
-                    </h2>
-                </div>
-                <div class="card-body" id="invitations-list">
-                    {% for inv in pending_invitations %}
-                    <div class="list-item invitation-item" id="invitation-{{ inv.id }}">
-                        <div class="list-item-info">
-                            <div class="avatar avatar-sm avatar-room">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                            </div>
-                            <div class="list-item-details">
-                                <span class="list-item-name">{{ inv.room.name }}</span>
-                                <span class="list-item-status">from {{ inv.sender.username }}</span>
-                            </div>
-                        </div>
-                        <div class="list-item-actions">
-                            <button class="btn btn-sm btn-success" onclick="acceptRoomInvite({{ inv.id }})">Join</button>
-                            <button class="btn btn-sm btn-danger" onclick="rejectRoomInvite({{ inv.id }})">Decline</button>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="empty-state" id="no-invitations">
-                        <p>No pending invitations</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Create Room -->
-            <div class="card" id="create-room-card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="16"></line>
-                            <line x1="8" y1="12" x2="16" y2="12"></line>
-                        </svg>
-                        Create Room
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{% url 'create_room' %}" id="create-room-form">
-                        {% csrf_token %}
-                        <div class="form-group">
-                            <label class="form-label">Room Name</label>
-                            <input type="text" name="name" class="form-input" placeholder="Room Name" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Description</label>
-                            <textarea name="description" class="form-input" placeholder="Room Description (optional)" rows="3"></textarea>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group form-group-half">
-                                <label class="form-label">Capacity</label>
-                                <input type="number" name="capacity" class="form-input" min="2" max="100" value="10">
-                            </div>
-                            <div class="form-group form-group-half">
-                                <label class="form-label">Password</label>
-                                <input type="password" name="password" class="form-input" placeholder="Leave blank for no password">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-full" id="create-room-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="8" x2="12" y2="16"></line>
-                                <line x1="8" y1="12" x2="16" y2="12"></line>
-                            </svg>
-                            Create Room
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Join Room -->
-            <div class="card" id="join-room-card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                            <polyline points="10 17 15 12 10 7"></polyline>
-                            <line x1="15" y1="12" x2="3" y2="12"></line>
-                        </svg>
-                        Join Room
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{% url 'join_room' %}" id="join-room-form">
-                        {% csrf_token %}
-                        <div class="form-group">
-                            <label class="form-label">Room Code</label>
-                            <input type="text" name="room_code" class="form-input" placeholder="e.g. ABC123" maxlength="6" style="text-transform: uppercase;" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <input type="password" name="password" class="form-input" placeholder="Password (if required)">
-                        </div>
-                        <button type="submit" class="btn btn-accent btn-full" id="join-room-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                                <polyline points="10 17 15 12 10 7"></polyline>
-                                <line x1="15" y1="12" x2="3" y2="12"></line>
-                            </svg>
-                            Join Room
-                        </button>
-                    </form>
                 </div>
             </div>
         </div>
