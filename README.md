@@ -15,7 +15,7 @@ The project was built to explore modern real-time web application architecture u
 - 💬 **Message Actions** – Reply to, edit, and delete messages.
 - 👤 **Presence Tracking** – Live active-user list with join/leave notifications.
 - 📨 **Room Invitations** – Invite friends to rooms with real-time notification delivery.
-- 🛡️ **Room Moderation** – Kick users, transfer ownership, and delete rooms.
+- 🛡️ **Room Moderation** – Kick users, transfer ownership, and delete rooms. A kick persists for the life of the room: the removed user cannot rejoin it.
 - 🔄 **Live Synchronization** – Messages, presence, and room events update without page refreshes.
 
 
@@ -64,6 +64,8 @@ The application uses room-based channel groups for message broadcasting and a `R
 Rooms are throwaway sessions, not persistent channels. `RoomMembership` doubles as the presence table — a row is created when a user's WebSocket connects and deleted when it disconnects — and **when the last member disconnects, the room is deleted along with its entire message history.** Closing the last tab is enough.
 
 Two other ways a room ends: the owner can delete it outright, or transfer ownership to another connected member and leave.
+
+Kick bans hang off the room row and are removed by the same cascade, so a kick lasts exactly as long as the room does and there is no unban flow to build.
 
 One gap worth knowing: that cleanup only runs from the WebSocket disconnect handler. A room is created by an ordinary HTTP request, so a room that is created but never actually entered has no disconnect to trigger on and will sit in the database indefinitely, holding its room code, with zero members and zero messages.
 
@@ -169,7 +171,7 @@ The application will be available at `http://127.0.0.1:8000/`.
 
 ## Running the tests
 
-The suite (20 tests) covers validation-error formatting, the Pydantic error middleware, Redis channel-layer delivery between independent layer instances, and live consumers driven through `WebsocketCommunicator` — the notification socket and the room password gate.
+The suite covers validation-error formatting, the Pydantic error middleware, Redis channel-layer delivery between independent layer instances, and live consumers driven through `WebsocketCommunicator` — the notification socket, the room password gate, and kick-ban enforcement across both entry points.
 
 ```bash
 python manage.py test
@@ -196,4 +198,3 @@ Worth knowing before you deploy on the free tier:
 - Free PostgreSQL instances are deleted after 30 days.
 - Free web services spin down after ~15 minutes of inactivity, and the first request afterwards takes 30–60 seconds. Because a room is deleted along with its messages when its last member disconnects, a spin-down or a redeploy destroys every live room and its chat history — the intended design, just triggered more often than it is locally.
 - The same restarts leave stale presence rows behind, which can make an empty room report itself as full. See `github-issues/deploy-issues.txt`.
-
