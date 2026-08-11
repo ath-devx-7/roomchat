@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from roomchat.errors import format_pydantic_errors
 from roomchat.middleware import json_validation_errors
 
-from .models import Room, RoomMembership, Message, RoomInvitation
+from .models import Room, RoomBan, RoomMembership, Message, RoomInvitation
 from accounts.models import Friendship
 from .schemas import RoomCreate, RoomJoin, RoomInvitationResponse
 
@@ -89,6 +89,12 @@ def join_room(request):
             messages.error(request, msg)
         return redirect('dashboard')
 
+    # A correct password does not undo a ban, and a grant must never point at a
+    # room the user cannot enter. Owners never hold a ban row, so no exemption.
+    if RoomBan.objects.filter(room=join_data.room, user=request.user).exists():
+        messages.error(request, 'You have been removed from this room.')
+        return redirect('dashboard')
+
     # RoomJoin has already verified the password; unlock the room for as long as
     # the user stays connected to it. One slot, so this replaces any prior grant.
     request.session['room_grant'] = join_data.room.room_code
@@ -101,6 +107,15 @@ def room_view(request, room_code):
     """Render the room page. Actual joining happens via WebSocket."""
     room = get_object_or_404(Room, room_code=room_code)
     is_owner = room.owner == request.user
+
+    # A ban is session-independent, so it is checked before anything else: the
+    # WebSocket gate alone would still let a banned user render the page and
+    # receive the message history below. Sitting above the password gate also
+    # closes the invitation bypass for free — we return before the invitation
+    # branch runs, so a friend re-inviting a banned user cannot mint a grant.
+    if not is_owner and RoomBan.objects.filter(room=room, user=request.user).exists():
+        messages.error(request, 'You have been removed from this room.')
+        return redirect('dashboard')
 
     # The gate runs before the history query below, so a user who has not
     # unlocked the room never receives any of its messages.

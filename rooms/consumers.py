@@ -5,13 +5,14 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.utils import timezone
 from pydantic import ValidationError, TypeAdapter, Field
 from typing import Union, Annotated
 
 from roomchat.errors import format_pydantic_errors
 
-from .models import Room, RoomMembership, Message
+from .models import Room, RoomBan, RoomMembership, Message
 from . import services
 from .schemas import (
     WSIncomingMessage,
@@ -48,6 +49,7 @@ from .schemas import (
 CLOSE_ROOM_FULL = 4001
 CLOSE_NOT_AUTHENTICATED = 4003
 CLOSE_ROOM_NOT_FOUND = 4004
+CLOSE_BANNED = 4005
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -71,6 +73,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room = await self.get_room()
         if not self.room:
             await self.reject(CLOSE_ROOM_NOT_FOUND, 'This room no longer exists.')
+            return
+
+        # A ban outlives the socket that carried the kick, so it is checked
+        # before capacity: a banned user arriving at a full room should hear the
+        # real reason, not 'this room is full'.
+        if await self.is_banned():
+            await self.reject(CLOSE_BANNED, 'You have been removed from this room.')
             return
 
         # Check capacity
@@ -133,7 +142,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Check if room is empty and delete it if so
             room_deleted = await self.check_and_delete_room_if_empty()
 
-            if not room_deleted:
+            if not room_deleted and not getattr(self, '_kicked', False):
                 # Notify room
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -246,10 +255,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         target_username = await self.get_username(msg.user_id)
+        # Read the membership row before ban_member() deletes it.
         target_channel = await self.get_member_channel(msg.user_id)
 
-        # Remove membership
-        await self.remove_membership(msg.user_id)
+        # Write the ban before the close frame goes out: a modified client that
+        # reconnects in the gap would otherwise come back clean.
+        if not await self.ban_member(msg.user_id):
+            await self.send(text_data=WSErrorEvent(
+                message='That user is no longer in this room.'
+            ).model_dump_json())
+            return
 
         # Notify the kicked user specifically
         if target_channel:
@@ -341,8 +356,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def user_kicked(self, event):
         """Sent directly to the kicked user's channel."""
+        # The kick handler already broadcast the departure and refreshed the
+        # active-user list; flag the close so disconnect() does not repeat both.
+        self._kicked = True
         await self.send(text_data=json.dumps(event))
-        await self.close()
+        await self.close(code=CLOSE_BANNED)
 
     async def user_kicked_broadcast(self, event):
         await self.send(text_data=json.dumps(event))
@@ -390,6 +408,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def is_member(self):
         return RoomMembership.objects.filter(user=self.user, room=self.room).exists()
+
+    @database_sync_to_async
+    def is_banned(self):
+        return RoomBan.objects.filter(room=self.room, user=self.user).exists()
 
     @database_sync_to_async
     def revoke_room_grant(self):
@@ -526,8 +548,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return None
 
     @database_sync_to_async
-    def remove_membership(self, user_id):
-        RoomMembership.objects.filter(user_id=user_id, room=self.room).delete()
+    def ban_member(self, user_id):
+        """Ban a member and drop their presence row, atomically.
+
+        Requiring an existing membership is an authorization tightening, not a
+        guard clause: deleting a non-existent membership used to be a silent
+        no-op, so a crafted kick_user frame was harmless. A durable ban row
+        changes that — without this check an owner could lock out arbitrary
+        user IDs who were never in the room.
+        """
+        with transaction.atomic():
+            membership = RoomMembership.objects.filter(
+                room=self.room, user_id=user_id
+            ).first()
+            if membership is None or user_id == self.room.owner_id:
+                return False
+            RoomBan.objects.get_or_create(
+                room=self.room, user_id=user_id, defaults={'banned_by': self.user},
+            )
+            membership.delete()
+        return True
 
     @database_sync_to_async
     def transfer_room_ownership(self, target_user_id):

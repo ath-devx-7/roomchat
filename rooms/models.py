@@ -56,6 +56,31 @@ class RoomMembership(models.Model):
         return f"{self.user.username} in {self.room.name}"
 
 
+class RoomBan(models.Model):
+    """A user removed from a room by its owner, checked at every entry point.
+
+    Deliberately no expires_at: a room is deleted as soon as its last member
+    disconnects, so the CASCADE from Room is the only lifetime a ban can
+    meaningfully have. A recycled room code lands on a new Room row, so an old
+    ban cannot follow it onto someone else's room.
+    """
+
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='bans')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='room_bans')
+    # Audit data, not a constraint — ownership transfers, and losing the issuer
+    # must not lift the ban.
+    banned_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name='bans_issued'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('room', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} banned from {self.room.name}"
+
+
 class RoomInvitation(models.Model):
     """An invitation to join a room, sent from one user to another."""
 

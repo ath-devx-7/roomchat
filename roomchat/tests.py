@@ -11,9 +11,11 @@ from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase, TransactionTestCase
 from pydantic import ValidationError
 
+from accounts.models import Friendship
 from accounts.schemas import UserCreate
-from rooms.consumers import CLOSE_NOT_AUTHENTICATED
-from rooms.models import Message, Room, RoomInvitation
+from rooms import services
+from rooms.consumers import CLOSE_BANNED, CLOSE_NOT_AUTHENTICATED, ChatConsumer
+from rooms.models import Message, Room, RoomBan, RoomInvitation, RoomMembership
 from rooms.routing import websocket_urlpatterns
 from rooms.schemas import RoomCreate, WSFriendRequestReceivedEvent
 from roomchat.errors import format_pydantic_errors
@@ -341,7 +343,7 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
         communicator.scope['session'] = session or {}
         return communicator
 
-    async def _assert_rejected(self, communicator):
+    async def _assert_rejected(self, communicator, code=CLOSE_NOT_AUTHENTICATED):
         connected, _ = await communicator.connect()
         # reject() accepts before closing, so connected is True either way.
         self.assertTrue(connected)
@@ -349,7 +351,7 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
         self.assertEqual(error['type'], 'error')
         close = await communicator.receive_output()
         self.assertEqual(close['type'], 'websocket.close')
-        self.assertEqual(close['code'], CLOSE_NOT_AUTHENTICATED)
+        self.assertEqual(close['code'], code)
         await communicator.disconnect()
 
     async def _assert_admitted(self, communicator):
@@ -382,6 +384,113 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
     async def test_grant_for_another_room_is_rejected(self):
         session = {'room_grant': 'OTHER1'}
         await self._assert_rejected(self._communicator(self.other, session))
+
+    async def test_banned_user_is_refused_despite_a_valid_grant(self):
+        # A ban is not session state, so the grant that admitted them before the
+        # kick no longer helps — and the close code says why.
+        await RoomBan.objects.acreate(room=self.room, user=self.other, banned_by=self.owner)
+        session = {'room_grant': self.room.room_code}
+        await self._assert_rejected(self._communicator(self.other, session), CLOSE_BANNED)
+
+
+class RoomBanTests(TransactionTestCase):
+    """ban_member is the only writer of RoomBan, and it refuses anyone who is
+    not currently a member — see the helper's docstring."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', password='x')
+        self.other = User.objects.create_user('other', password='x')
+        self.room = Room.objects.create(name='Secret', owner=self.owner, password='hashed')
+
+    def _consumer(self, user):
+        """A consumer instance just complete enough to drive ban_member()."""
+        consumer = ChatConsumer()
+        consumer.room = self.room
+        consumer.user = user
+        return consumer
+
+    async def test_ban_member_refuses_a_non_member(self):
+        # Without the membership requirement a crafted kick_user frame could
+        # lock out a user who was never in the room.
+        self.assertFalse(await self._consumer(self.owner).ban_member(self.other.id))
+        self.assertFalse(await RoomBan.objects.filter(room=self.room).aexists())
+
+    async def test_owner_cannot_be_banned(self):
+        await RoomMembership.objects.acreate(room=self.room, user=self.owner)
+        self.assertFalse(await self._consumer(self.owner).ban_member(self.owner.id))
+        self.assertFalse(await RoomBan.objects.filter(room=self.room).aexists())
+        self.assertTrue(
+            await RoomMembership.objects.filter(room=self.room, user=self.owner).aexists()
+        )
+
+    async def test_ban_member_removes_presence_and_records_the_issuer(self):
+        await RoomMembership.objects.acreate(room=self.room, user=self.other)
+        self.assertTrue(await self._consumer(self.owner).ban_member(self.other.id))
+        ban = await RoomBan.objects.aget(room=self.room, user=self.other)
+        self.assertEqual(ban.banned_by_id, self.owner.id)
+        self.assertFalse(
+            await RoomMembership.objects.filter(room=self.room, user=self.other).aexists()
+        )
+
+
+class RoomBanHTTPGateTests(TestCase):
+    """room_view is the gate that matters: the WS check alone would still let a
+    banned user render the page and receive the message history."""
+
+    PASSWORD = 'hunter22'
+
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', password='x')
+        self.other = User.objects.create_user('other', password='x')
+        self.room = Room.objects.create(
+            name='Secret', owner=self.owner, password=make_password(self.PASSWORD),
+        )
+        self.secret_line = 'topsecretchatter'
+        Message.objects.create(room=self.room, sender=self.owner, content=self.secret_line)
+        RoomBan.objects.create(room=self.room, user=self.other, banned_by=self.owner)
+        self.client.force_login(self.other)
+
+    def _url(self):
+        return f'/room/{self.room.room_code}/'
+
+    def test_banned_user_redirects_and_leaks_no_history(self):
+        response = self.client.get(self._url(), follow=True)
+        self.assertRedirects(response, '/dashboard/')
+        self.assertNotContains(response, self.secret_line)
+        self.assertNotIn('room_grant', self.client.session)
+
+    def test_accepted_invitation_does_not_override_a_ban(self):
+        # Asserts the gate ordering: the ban check returns before the invitation
+        # branch, so the invitation is neither consumed nor able to mint a grant.
+        RoomInvitation.objects.create(
+            room=self.room, sender=self.owner, receiver=self.other, status='accepted',
+        )
+        response = self.client.get(self._url(), follow=True)
+        self.assertRedirects(response, '/dashboard/')
+        self.assertNotContains(response, self.secret_line)
+        self.assertNotIn('room_grant', self.client.session)
+        self.assertTrue(
+            RoomInvitation.objects.filter(room=self.room, receiver=self.other).exists()
+        )
+
+    def test_correct_password_does_not_mint_a_grant_for_a_banned_user(self):
+        response = self.client.post('/room/join/', {
+            'room_code': self.room.room_code, 'password': self.PASSWORD,
+        }, follow=True)
+        self.assertRedirects(response, '/dashboard/')
+        self.assertNotIn('room_grant', self.client.session)
+
+    def test_invitation_to_a_banned_user_is_refused_with_a_reason(self):
+        Friendship.objects.create(sender=self.owner, receiver=self.other, status='accepted')
+        result = services.create_room_invitation(self.owner, self.room, self.other.id)
+        self.assertEqual(result['error'], 'That user was removed from this room.')
+        self.assertFalse(RoomInvitation.objects.filter(room=self.room).exists())
+
+    def test_deleting_the_room_cascades_the_ban(self):
+        # The room's lifetime is the ban's lifetime — that is why there is no
+        # expires_at. A recycled room code lands on a new Room row.
+        self.room.delete()
+        self.assertFalse(RoomBan.objects.filter(user=self.other).exists())
 
 
 class RoomViewGateTests(TestCase):

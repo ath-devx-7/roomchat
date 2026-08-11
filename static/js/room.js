@@ -28,6 +28,7 @@ const FATAL_CLOSE_CODES = {
     4001: 'This room is full.',
     4003: 'You must be signed in to join a room.',
     4004: 'This room no longer exists.',
+    4005: 'You have been removed from this room.',
 };
 
 // ─── WebSocket Connection ───────────────────────────────────
