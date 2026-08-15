@@ -1,14 +1,11 @@
-from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.db.models import Q
 
 from pydantic import ValidationError
 
-from roomchat.errors import format_pydantic_errors
+from roomchat.errors import api_login_required, format_pydantic_errors, require_POST_json
 from roomchat.middleware import json_validation_errors
 
 from asgiref.sync import async_to_sync
@@ -16,6 +13,7 @@ from channels.layers import get_channel_layer
 
 from .models import Friendship
 from .schemas import (
+    AuthUserResponse,
     UserCreate,
     UserLogin,
     FriendItemResponse,
@@ -40,88 +38,85 @@ def notify_friend_request(friendship):
     )
 
 
-def register_view(request):
-    """Handle user registration."""
+def user_payload(user) -> dict:
+    """Serialize a User for the auth endpoints and the SPA bootstrap."""
+    return AuthUserResponse(
+        id=user.id, username=user.username, email=user.email
+    ).model_dump(mode='json')
+
+
+@require_POST_json
+def register_api(request):
+    """Create an account and sign the new user in."""
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return JsonResponse({'error': 'Already signed in.'}, status=400)
 
-    errors = {}
-    username = ''
-    email = ''
+    try:
+        user_data = UserCreate(
+            username=request.POST.get('username', ''),
+            email=request.POST.get('email', ''),
+            # Passwords are never stripped — trimming one silently changes it.
+            password=request.POST.get('password', ''),
+            confirm_password=request.POST.get('confirm_password', ''),
+        )
+    except ValidationError as e:
+        return JsonResponse({'errors': format_pydantic_errors(e)}, status=400)
 
-    if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        email = request.POST.get('email', '').strip()
-        # Passwords are never stripped — trimming one silently changes it.
-        password = request.POST.get('password', '')
-        confirm_password = request.POST.get('confirm_password', '')
+    # Keyed under 'username' so the SPA can pin the message to that field, matching
+    # how format_pydantic_errors reports every other registration failure.
+    if User.objects.filter(username=user_data.username).exists():
+        return JsonResponse(
+            {'errors': {'username': 'A user with that username already exists.'}}, status=400
+        )
 
-        try:
-            user_data = UserCreate(
-                username=username,
-                email=email,
-                password=password,
-                confirm_password=confirm_password,
-            )
-            if User.objects.filter(username=user_data.username).exists():
-                errors['username'] = 'A user with that username already exists.'
-            else:
-                user = User.objects.create_user(
-                    username=user_data.username,
-                    email=user_data.email,
-                    password=user_data.password
-                )
-                login(request, user)
-                return redirect('dashboard')
-        except ValidationError as e:
-            errors = format_pydantic_errors(e)
-        except Exception as e:
-            errors['username'] = f'Error creating user: {str(e)}'
-
-    return render(request, 'accounts/register.html', {
-        'errors': errors,
-        'username': username,
-        'email': email,
-    })
+    user = User.objects.create_user(
+        username=user_data.username,
+        email=user_data.email,
+        password=user_data.password,
+    )
+    login(request, user)
+    return JsonResponse({'user': user_payload(user)})
 
 
-def login_view(request):
-    """Handle user login."""
+@require_POST_json
+def login_api(request):
+    """Authenticate and open a session."""
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return JsonResponse({'error': 'Already signed in.'}, status=400)
 
-    errors = {}
-    username = ''
+    try:
+        login_data = UserLogin(
+            username=request.POST.get('username', ''),
+            password=request.POST.get('password', ''),
+        )
+    except ValidationError as e:
+        return JsonResponse({'errors': format_pydantic_errors(e)}, status=400)
 
-    if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
+    user = authenticate(request, username=login_data.username, password=login_data.password)
+    if user is None:
+        # Deliberately not a per-field error: saying which half was wrong tells an
+        # attacker whether the username exists.
+        return JsonResponse({'error': 'Invalid username or password.'}, status=400)
 
-        try:
-            login_data = UserLogin(username=username, password=password)
-            user = authenticate(request, username=login_data.username, password=login_data.password)
-            if user is not None:
-                login(request, user)
-                return redirect('dashboard')
-            else:
-                messages.error(request, 'Invalid username or password.')
-        except ValidationError as e:
-            errors = format_pydantic_errors(e)
-
-    return render(request, 'accounts/login.html', {
-        'errors': errors,
-        'username': username,
-    })
+    login(request, user)
+    return JsonResponse({'user': user_payload(user)})
 
 
-
-def logout_view(request):
-    """Handle user logout."""
+@require_POST_json
+def logout_api(request):
+    """End the session. POST-only, so a stray link or prefetch cannot sign a user out."""
     logout(request)
-    return redirect('login')
+    return JsonResponse({'success': True})
 
 
-@login_required
+@api_login_required
+def me_api(request):
+    """The signed-in user. The SPA bootstraps from window.__ROOMCHAT__ and only calls
+    this to re-check a session it suspects has expired."""
+    return JsonResponse({'user': user_payload(request.user)})
+
+
+@api_login_required
 def send_friend_request(request):
     """Send a friend request to another user (AJAX)."""
     if request.method == 'POST':
@@ -157,7 +152,7 @@ def send_friend_request(request):
     return JsonResponse({'error': 'Invalid request.'}, status=400)
 
 
-@login_required
+@api_login_required
 def accept_friend_request(request, friendship_id):
     """Accept a pending friend request (AJAX)."""
     if request.method == 'POST':
@@ -175,7 +170,7 @@ def accept_friend_request(request, friendship_id):
     return JsonResponse({'error': 'Invalid request.'}, status=400)
 
 
-@login_required
+@api_login_required
 def reject_friend_request(request, friendship_id):
     """Reject (delete) a pending friend request (AJAX)."""
     if request.method == 'POST':
@@ -192,7 +187,7 @@ def reject_friend_request(request, friendship_id):
     return JsonResponse({'error': 'Invalid request.'}, status=400)
 
 
-@login_required
+@api_login_required
 def remove_friend(request, friendship_id):
     """Remove an existing friend (AJAX)."""
     if request.method == 'POST':
@@ -210,7 +205,7 @@ def remove_friend(request, friendship_id):
     return JsonResponse({'error': 'Invalid request.'}, status=400)
 
 
-@login_required
+@api_login_required
 @json_validation_errors
 def friends_list_api(request):
     """Return friends and pending requests as JSON."""

@@ -322,7 +322,7 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
     """The WS gate is a plain session check: owners bypass, everyone else needs
     session['room_grant'] to hold this room's code.
 
-    room_view is the only thing that mints a grant — including from an accepted
+    room_detail_api is the only thing that mints a grant — including from an accepted
     invitation — so an invitation alone does not open a socket."""
 
     def setUp(self):
@@ -370,7 +370,7 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
         await self._assert_admitted(self._communicator(self.owner))
 
     async def test_accepted_invite_alone_is_rejected(self):
-        # The invitation is consumed by room_view, not read here.
+        # The invitation is consumed by room_detail_api, not read here.
         await RoomInvitation.objects.acreate(
             room=self.room, sender=self.owner, receiver=self.other,
             status='accepted',
@@ -434,8 +434,8 @@ class RoomBanTests(TransactionTestCase):
 
 
 class RoomBanHTTPGateTests(TestCase):
-    """room_view is the gate that matters: the WS check alone would still let a
-    banned user render the page and receive the message history."""
+    """room_detail_api is the gate that matters: the WS check alone would still let a
+    banned user load the room and receive the message history."""
 
     PASSWORD = 'hunter22'
 
@@ -451,12 +451,13 @@ class RoomBanHTTPGateTests(TestCase):
         self.client.force_login(self.other)
 
     def _url(self):
-        return f'/room/{self.room.room_code}/'
+        return f'/api/rooms/{self.room.room_code}/'
 
-    def test_banned_user_redirects_and_leaks_no_history(self):
-        response = self.client.get(self._url(), follow=True)
-        self.assertRedirects(response, '/dashboard/')
-        self.assertNotContains(response, self.secret_line)
+    def test_banned_user_is_refused_and_leaks_no_history(self):
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 403)
+        self.assertNotContains(response, self.secret_line, status_code=403)
+        self.assertNotIn('messages', response.json())
         self.assertNotIn('room_grant', self.client.session)
 
     def test_accepted_invitation_does_not_override_a_ban(self):
@@ -465,19 +466,19 @@ class RoomBanHTTPGateTests(TestCase):
         RoomInvitation.objects.create(
             room=self.room, sender=self.owner, receiver=self.other, status='accepted',
         )
-        response = self.client.get(self._url(), follow=True)
-        self.assertRedirects(response, '/dashboard/')
-        self.assertNotContains(response, self.secret_line)
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 403)
+        self.assertNotContains(response, self.secret_line, status_code=403)
         self.assertNotIn('room_grant', self.client.session)
         self.assertTrue(
             RoomInvitation.objects.filter(room=self.room, receiver=self.other).exists()
         )
 
     def test_correct_password_does_not_mint_a_grant_for_a_banned_user(self):
-        response = self.client.post('/room/join/', {
+        response = self.client.post('/api/rooms/join/', {
             'room_code': self.room.room_code, 'password': self.PASSWORD,
-        }, follow=True)
-        self.assertRedirects(response, '/dashboard/')
+        })
+        self.assertEqual(response.status_code, 403)
         self.assertNotIn('room_grant', self.client.session)
 
     def test_invitation_to_a_banned_user_is_refused_with_a_reason(self):
@@ -493,8 +494,9 @@ class RoomBanHTTPGateTests(TestCase):
         self.assertFalse(RoomBan.objects.filter(user=self.other).exists())
 
 
-class RoomViewGateTests(TestCase):
-    """room_view is the HTTP gate and the only place a grant is minted."""
+class RoomDetailGateTests(TestCase):
+    """room_detail_api is the HTTP gate; it and join_room are the only two places a
+    grant is minted."""
 
     PASSWORD = 'hunter22'
 
@@ -512,34 +514,41 @@ class RoomViewGateTests(TestCase):
         self.client.force_login(self.other)
 
     def _url(self, room):
-        return f'/room/{room.room_code}/'
+        return f'/api/rooms/{room.room_code}/'
 
-    def test_locked_room_without_grant_redirects_and_leaks_no_history(self):
-        response = self.client.get(self._url(self.room), follow=True)
-        self.assertRedirects(response, '/dashboard/')
-        self.assertNotContains(response, self.secret_line)
+    def _contents(self, response):
+        self.assertEqual(response.status_code, 200)
+        return [m['content'] for m in response.json()['messages']]
+
+    def test_locked_room_without_grant_is_refused_and_leaks_no_history(self):
+        response = self.client.get(self._url(self.room))
+        self.assertEqual(response.status_code, 403)
+        self.assertNotContains(response, self.secret_line, status_code=403)
+        self.assertNotIn('messages', response.json())
         self.assertNotIn('room_grant', self.client.session)
 
     def test_correct_password_mints_grant_and_admits(self):
-        response = self.client.post('/room/join/', {
+        response = self.client.post('/api/rooms/join/', {
             'room_code': self.room.room_code, 'password': self.PASSWORD,
         })
-        self.assertRedirects(response, self._url(self.room))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['room_code'], self.room.room_code)
         self.assertEqual(self.client.session['room_grant'], self.room.room_code)
-        self.assertContains(self.client.get(self._url(self.room)), self.secret_line)
+        self.assertIn(self.secret_line, self._contents(self.client.get(self._url(self.room))))
 
     def test_bare_code_with_empty_password_is_rejected(self):
-        response = self.client.post('/room/join/', {
+        response = self.client.post('/api/rooms/join/', {
             'room_code': self.room.room_code, 'password': '',
-        }, follow=True)
-        self.assertContains(response, 'Incorrect room password.')
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Incorrect room password.', response.json()['errors'].values())
         self.assertNotIn('room_grant', self.client.session)
 
     def test_accepted_invitation_admits_exactly_once(self):
         RoomInvitation.objects.create(
             room=self.room, sender=self.owner, receiver=self.other, status='accepted',
         )
-        self.assertContains(self.client.get(self._url(self.room)), self.secret_line)
+        self.assertIn(self.secret_line, self._contents(self.client.get(self._url(self.room))))
         self.assertFalse(
             RoomInvitation.objects.filter(room=self.room, receiver=self.other).exists()
         )
@@ -549,14 +558,132 @@ class RoomViewGateTests(TestCase):
         del session['room_grant']
         session.save()
 
-        again = self.client.get(self._url(self.room), follow=True)
-        self.assertRedirects(again, '/dashboard/')
-        self.assertNotContains(again, self.secret_line)
+        again = self.client.get(self._url(self.room))
+        self.assertEqual(again.status_code, 403)
+        self.assertNotContains(again, self.secret_line, status_code=403)
 
     def test_owner_needs_no_grant(self):
         self.client.force_login(self.owner)
-        self.assertContains(self.client.get(self._url(self.room)), self.secret_line)
+        self.assertIn(self.secret_line, self._contents(self.client.get(self._url(self.room))))
         self.assertNotIn('room_grant', self.client.session)
 
     def test_open_room_is_reachable_directly(self):
         self.assertEqual(self.client.get(self._url(self.open_room)).status_code, 200)
+
+    def test_unknown_room_is_404_json(self):
+        response = self.client.get('/api/rooms/ZZZZZZ/')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['error'], 'This room no longer exists.')
+
+    def test_room_payload_never_carries_the_password_hash(self):
+        self.client.force_login(self.owner)
+        room = self.client.get(self._url(self.room)).json()['room']
+        self.assertTrue(room['is_protected'])
+        self.assertNotIn('password', room)
+
+    def test_history_carries_the_reply_preview_shape_the_socket_uses(self):
+        parent = Message.objects.get(room=self.room, content=self.secret_line)
+        Message.objects.create(
+            room=self.room, sender=self.owner, content='a reply', reply_to=parent,
+        )
+        self.client.force_login(self.owner)
+        messages = self.client.get(self._url(self.room)).json()['messages']
+        preview = messages[-1]['reply_to']
+        # The same three keys ChatConsumer.get_message_preview emits, so the frontend
+        # renders history and live messages through one code path.
+        self.assertEqual(set(preview), {'message_id', 'sender_username', 'content'})
+        self.assertEqual(preview['sender_username'], self.owner.username)
+
+
+class ApiAuthTests(TestCase):
+    """The SPA cannot follow a redirect to an HTML login page, so an unauthenticated
+    API call must answer 401 JSON."""
+
+    def test_unauthenticated_api_call_is_401_json(self):
+        response = self.client.get('/api/dashboard/')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['error'], 'Not authenticated.')
+
+    def test_register_signs_the_user_in(self):
+        response = self.client.post('/api/auth/register/', {
+            'username': 'newbie', 'email': 'newbie@example.com',
+            'password': 'hunter22', 'confirm_password': 'hunter22',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['user']['username'], 'newbie')
+        self.assertEqual(self.client.get('/api/dashboard/').status_code, 200)
+
+    def test_register_reports_field_errors(self):
+        response = self.client.post('/api/auth/register/', {
+            'username': 'newbie', 'email': 'newbie@example.com',
+            'password': 'hunter22', 'confirm_password': 'mismatch',
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('confirm_password', response.json()['errors'])
+
+    def test_duplicate_username_is_a_field_error(self):
+        User.objects.create_user('taken', password='hunter22')
+        response = self.client.post('/api/auth/register/', {
+            'username': 'taken', 'email': 'taken@example.com',
+            'password': 'hunter22', 'confirm_password': 'hunter22',
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['errors']['username'],
+            'A user with that username already exists.',
+        )
+
+    def test_login_and_logout_round_trip(self):
+        User.objects.create_user('someone', password='hunter22')
+        login_res = self.client.post('/api/auth/login/', {
+            'username': 'someone', 'password': 'hunter22',
+        })
+        self.assertEqual(login_res.status_code, 200)
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 200)
+
+        self.assertEqual(self.client.post('/api/auth/logout/').status_code, 200)
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 401)
+
+    def test_bad_credentials_do_not_say_which_half_was_wrong(self):
+        User.objects.create_user('someone', password='hunter22')
+        response = self.client.post('/api/auth/login/', {
+            'username': 'someone', 'password': 'wrong',
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Invalid username or password.')
+        self.assertNotIn('errors', response.json())
+
+    def test_logout_rejects_get(self):
+        # A GET logout is reachable by a link prefetch or a stray <a href>.
+        self.assertEqual(self.client.get('/api/auth/logout/').status_code, 405)
+
+
+class SpaShellTests(TestCase):
+    """Client-side routes must survive a hard refresh, and the shell has to hand the
+    SPA a CSRF cookie and the signed-in user."""
+
+    def test_client_routes_serve_the_shell(self):
+        for path in ('/', '/login', '/dashboard', '/room/ABC123'):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'id="root"')
+
+    def test_shell_sets_the_csrf_cookie(self):
+        response = self.client.get('/login')
+        self.assertIn('csrftoken', response.cookies)
+
+    def test_shell_bootstraps_the_signed_in_user(self):
+        user = User.objects.create_user('someone', password='x', email='s@example.com')
+        self.client.force_login(user)
+        response = self.client.get('/dashboard')
+        self.assertContains(response, 'someone')
+        self.assertContains(response, 'roomchat-bootstrap')
+
+    def test_shell_bootstraps_null_for_anonymous(self):
+        self.assertContains(self.client.get('/dashboard'), '"user": null')
+
+    def test_api_paths_never_fall_through_to_the_shell(self):
+        response = self.client.get('/api/nope/')
+        self.assertEqual(response.status_code, 404)
+        self.assertNotContains(response, 'id="root"', status_code=404)

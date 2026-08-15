@@ -130,8 +130,8 @@ STORAGES = {
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
 }
 
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+# Routing after sign-in is the SPA's job now; these only still matter to django.contrib.admin.
+# API views use roomchat.errors.api_login_required, which answers 401 instead of redirecting.
+LOGIN_URL = '/login'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -1,0 +1,113 @@
+/* Nunito is loaded by a <link> in templates/index.html (and frontend/public/index.html
+   for the dev server). An @import here would block the stylesheet on a second request. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    margin: 0;
+    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #f8fafc;
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, monospace;
+}
+
+@layer base {
+    :root {
+        --background: 210 40% 98%;
+        --foreground: 222 47% 11%;
+        --card: 0 0% 100%;
+        --card-foreground: 222 47% 11%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 47% 11%;
+        --primary: 210 82% 56%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222 47% 11%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215 16% 47%;
+        --accent: 210 92% 95%;
+        --accent-foreground: 210 82% 40%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 214 32% 91%;
+        --input: 214 32% 91%;
+        --ring: 210 82% 56%;
+        --radius: 1rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+/* Custom scrollbars */
+.rc-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.rc-scroll::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 999px;
+}
+.rc-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+@keyframes rc-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.rc-fade-up {
+    animation: rc-fade-up 0.5s ease-out both;
+}
+
+@keyframes rc-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+.rc-pop {
+    animation: rc-pop 0.25s ease-out both;
+}
+
+@keyframes rc-pulse-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+.rc-online-ring {
+    animation: rc-pulse-ring 2s infinite;
+}
+
+.chat-bg {
+    background-color: #f1f5f9;
+    background-image: radial-gradient(#dbe4ef 1px, transparent 1px);
+    background-size: 22px 22px;
+}

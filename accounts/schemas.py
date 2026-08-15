@@ -74,6 +74,14 @@ class UserLogin(BaseModel):
         return v
 
 
+class AuthUserResponse(BaseModel):
+    """The signed-in user, as returned by the auth endpoints and bootstrapped into
+    window.__ROOMCHAT__ by templates/index.html."""
+    id: int
+    username: str
+    email: str
+
+
 class FriendItemResponse(BaseModel):
     id: int
     user_id: int

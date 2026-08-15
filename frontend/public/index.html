@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>RoomChat</title>
+    </head>
+    <body>
+        <noscript>You need to enable JavaScript to run RoomChat.</noscript>
+        <div id="root"></div>
+    </body>
+</html>
+<!--
+  This file exists only because react-scripts' build refuses to start without it
+  (checkRequiredFiles on paths.appHtml). It is NOT the page users get: craco.config.js
+  strips HtmlWebpackPlugin from the production build, and Django renders the real shell
+  from templates/index.html so it can set the CSRF cookie and bootstrap the user.
+
+  It IS the page the `yarn start` dev server serves, so keep it in sync with the
+  <head> of templates/index.html if you rely on the dev server.
+-->

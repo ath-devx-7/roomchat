@@ -87,9 +87,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.reject(CLOSE_ROOM_FULL, 'This room is full.')
             return
 
-        # Check if the user is authorized to join the room. room_view is the only
-        # thing that mints a grant, and every socket is opened from a page it
-        # rendered, so this gate is a plain session check. Deliberately no
+        # Check if the user is authorized to join the room. room_detail_api is the
+        # only thing that mints a grant, and the SPA opens this socket only after
+        # that call succeeds, so this gate is a plain session check. Deliberately no
         # is_member() short-circuit: a stale membership row from an unclean
         # disconnect must not skip the password.
         if self.room.password and not await self.check_is_owner():

@@ -92,6 +92,70 @@ class RoomInvitationResponse(BaseModel):
     room_name: str
     sender_username: str
     created_at: datetime
+    # Informational only — accepting an invitation bypasses the password by design,
+    # so the UI shows a lock badge but never asks for one.
+    is_protected: bool = False
+
+
+# ─── Room HTTP Response Schemas ───
+
+class RoomCreatedResponse(BaseModel):
+    room_code: str
+
+
+class RoomSummaryResponse(BaseModel):
+    """Room metadata for the SPA. `is_protected` is a boolean, never the hash —
+    Room.password holds a make_password() digest and must not leave the server."""
+    room_code: str
+    name: str
+    description: str
+    capacity: int
+    owner_id: int
+    owner_username: str
+    is_protected: bool
+
+
+class MessageResponse(BaseModel):
+    """One row of room history, shaped to match the WSMessageCreatedEvent the socket
+    delivers for live messages, so the SPA renders both through one code path."""
+    message_id: int
+    sender_id: int
+    sender_username: str
+    content: str
+    created_at: datetime
+    edited_at: Optional[datetime] = None
+    is_deleted: bool = False
+    reply_to: Optional[dict] = None
+
+
+class RoomDetailResponse(BaseModel):
+    room: RoomSummaryResponse
+    is_owner: bool
+    messages: List[MessageResponse]
+
+
+class DashboardFriendResponse(BaseModel):
+    friendship_id: int
+    user_id: int
+    username: str
+    # The room the friend is currently connected to, or None. This is the only
+    # presence signal the backend has, and it is a snapshot taken at request time.
+    current_room_code: Optional[str] = None
+    current_room_name: Optional[str] = None
+
+
+class DashboardFriendRequestResponse(BaseModel):
+    id: int
+    sender_id: int
+    sender_username: str
+    created_at: datetime
+
+
+class DashboardResponse(BaseModel):
+    friends: List[DashboardFriendResponse]
+    pending_requests: List[DashboardFriendRequestResponse]
+    pending_invitations: List[RoomInvitationResponse]
+    current_room_code: Optional[str] = None
 
 
 # ─── WebSocket Incoming Payload Schemas (Discriminated Union) ───

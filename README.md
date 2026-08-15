@@ -29,15 +29,23 @@ The project was built to explore modern real-time web application architecture u
 | ASGI server | Daphne |
 | Database | PostgreSQL |
 | Channel layer | Redis (`channels_redis`, pub/sub) |
-| Frontend | HTML, CSS, vanilla JavaScript |
-| Protocol | WebSockets (alongside standard HTTP) |
+| Frontend | React 19, react-router, Tailwind CSS, shadcn/ui (Radix) |
+| Frontend build | Create React App via craco |
+| Protocol | WebSockets (alongside a JSON HTTP API) |
 
 ## Architecture Overview
 
-RoomChat combines traditional Django HTTP requests with real-time WebSocket communication using Django Channels.
+RoomChat is a React single-page app talking to a Django backend that serves both a JSON API and
+WebSockets from one ASGI application.
 
-- **HTTP** handles authentication, friend management, room creation, and page rendering.
-- **WebSockets** handle real-time messaging, active user updates, room invitations, and moderation events.
+- **HTTP** is a JSON API under `/api/` (authentication, friend management, room creation, room
+  history), plus the shell page that boots the SPA. Every non-API path returns that shell, so
+  client-side routes survive a refresh or a pasted link.
+- **WebSockets** handle real-time messaging, active user updates, room invitations, and moderation
+  events.
+
+Both are authenticated by the same Django session cookie, so signing in over HTTP is what authorises
+the WebSocket handshake.
 
 ```text
 Browser
@@ -50,7 +58,10 @@ ASGI Application
 ▼     ▼
 HTTP  WebSocket
 │       │
-Views  Consumers
+JSON   Consumers
+API      │
++ SPA    │
+shell    │
 │       │
 └───┬───┘
     ▼
@@ -69,13 +80,24 @@ Kick bans hang off the room row and are removed by the same cascade, so a kick l
 
 One gap worth knowing: that cleanup only runs from the WebSocket disconnect handler. A room is created by an ordinary HTTP request, so a room that is created but never actually entered has no disconnect to trigger on and will sit in the database indefinitely, holding its room code, with zero members and zero messages.
 
-While a room is alive, the room page loads the **most recent 100 messages** on page load; anything older is not sent to the client.
+While a room is alive, opening it loads **100 messages** of history; anything beyond that is not
+sent to the client. Note this is currently the *oldest* 100 rather than the most recent — a known
+bug, tracked as #13 in `features.txt`.
+
+## Feature gaps
+
+The UI is deliberately a little larger than the backend: some affordances are visible but not yet
+functional (avatars, friend presence, member counts on invitations, typing indicators, password
+reset). **`features.txt` documents every one of them** — what the UI shows, what the backend does
+today, and what closing the gap would take. Read it before assuming something is broken.
 
 ## Prerequisites
 
 Make sure you have the following installed on your machine:
 - [Python 3.12+](https://www.python.org/downloads/) (Django 6.0 requires 3.12 or newer)
 - [pip](https://pip.pypa.io/en/stable/installation/) (Python package manager)
+- **Node.js 18+ and Yarn** — *only if you intend to change the frontend.* The compiled bundle is
+  committed to `static/react/`, so running the app does not require Node at all.
 - **PostgreSQL 14+** — the application database
 - **Redis 7+** — backs the Channels channel layer. All real-time features (messaging, presence, invitations, moderation) stop working without it.
 
@@ -156,7 +178,23 @@ python manage.py createsuperuser
 ```
 Gives you the Django admin at `http://127.0.0.1:8000/admin/`, where rooms, memberships, invitations, messages and friendships are all browsable. Handy during development for watching presence rows appear and disappear as users connect.
 
-**8. Run the development server**
+**8. Build the frontend (only if you changed it)**
+
+The production bundle in `static/react/` is committed, so you can skip this entirely unless you have
+edited something under `frontend/src/`:
+```bash
+cd frontend
+yarn install
+yarn build          # writes ../static/react/js/main.js and ../static/react/css/main.css
+cd ..
+```
+Commit the rebuilt bundle along with your source change — the deployment has no Node runtime and
+builds nothing, so an uncommitted bundle means your change never reaches the browser.
+
+For faster iteration, `yarn start` runs the CRA dev server on `:3000` and proxies HTTP to Django on
+`:8000`. It does not reliably proxy WebSockets, so verify anything real-time against a real build.
+
+**9. Run the development server**
 
 Make sure PostgreSQL and Redis are both running first. The server starts fine without Redis, but every real-time feature will silently fail once you use the app, so it is worth confirming:
 ```bash
@@ -171,7 +209,7 @@ The application will be available at `http://127.0.0.1:8000/`.
 
 ## Running the tests
 
-The suite covers validation-error formatting, the Pydantic error middleware, Redis channel-layer delivery between independent layer instances, and live consumers driven through `WebsocketCommunicator` — the notification socket, the room password gate, and kick-ban enforcement across both entry points.
+The suite covers validation-error formatting, the Pydantic error middleware, Redis channel-layer delivery between independent layer instances, live consumers driven through `WebsocketCommunicator` (the notification socket, the room password gate, kick-ban enforcement across both entry points), the JSON auth endpoints, and the SPA shell — including that client-side routes survive a hard refresh and that `/api/` paths never fall through to it.
 
 ```bash
 python manage.py test
@@ -192,6 +230,7 @@ Two details specific to this stack:
 
 - **The server must be Daphne, not Gunicorn.** WebSockets need ASGI, so the start command is `daphne -b 0.0.0.0 -p $PORT --proxy-headers roomchat.asgi:application`. A WSGI server will serve the pages fine and then break every real-time feature.
 - **Static files are served by WhiteNoise** from inside the ASGI process, so `collectstatic` runs at build time and there is no separate static host to configure.
+- **The frontend is not built during deployment.** Render's build runs the Python runtime, which has no npm, so `static/react/` is committed and `collectstatic` simply hashes and compresses it like any other asset. Rebuild and commit it locally whenever the frontend changes.
 
 Worth knowing before you deploy on the free tier:
 

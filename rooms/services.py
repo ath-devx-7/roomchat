@@ -40,7 +40,7 @@ def create_room_invitation(actor, room, target_user_id):
     if not are_friends:
         return {'error': 'You can only invite friends.'}
 
-    # room_view refuses a banned user anyway; catching it here turns a silently
+    # room_detail_api refuses a banned user anyway; catching it here turns a silently
     # dead invitation into an explanation for the sender.
     if RoomBan.objects.filter(room=room, user=target_user).exists():
         return {'error': 'That user was removed from this room.'}

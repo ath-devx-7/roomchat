@@ -1,0 +1,155 @@
+{
+  "theme": "light",
+  "brand": {
+    "name": "RoomChat",
+    "personality": "Friendly, modern, approachable, and warm.",
+    "inspiration": "WhatsApp / Telegram (specifically Telegram Blue accent)"
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Nunito, sans-serif",
+      "body": "Nunito, sans-serif"
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl font-extrabold tracking-tight",
+      "h2": "text-2xl sm:text-3xl font-bold",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "body": "text-base font-normal leading-relaxed",
+      "small": "text-sm font-medium",
+      "tiny": "text-xs font-semibold tracking-wide"
+    }
+  },
+  "colors": {
+    "primary": {
+      "DEFAULT": "#3390EC",
+      "hover": "#297ACC",
+      "light": "#EBF4FD",
+      "foreground": "#FFFFFF"
+    },
+    "background": {
+      "app": "#F8FAFC",
+      "card": "#FFFFFF",
+      "chat_area": "#F1F5F9"
+    },
+    "text": {
+      "primary": "#0F172A",
+      "secondary": "#64748B",
+      "muted": "#94A3B8"
+    },
+    "status": {
+      "online": "#22C55E",
+      "error": "#EF4444",
+      "warning": "#F59E0B"
+    },
+    "chat_bubbles": {
+      "sent": {
+        "bg": "#3390EC",
+        "text": "#FFFFFF"
+      },
+      "received": {
+        "bg": "#FFFFFF",
+        "text": "#0F172A",
+        "border": "#E2E8F0"
+      }
+    }
+  },
+  "visual_enhancers": {
+    "border_radius": {
+      "button": "rounded-full",
+      "input": "rounded-2xl",
+      "card": "rounded-3xl",
+      "bubble": "rounded-3xl",
+      "bubble_tail_sent": "rounded-br-sm",
+      "bubble_tail_received": "rounded-bl-sm"
+    },
+    "shadows": {
+      "soft": "shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+      "floating": "shadow-[0_20px_40px_rgb(51,144,236,0.1)]",
+      "bubble": "shadow-sm"
+    },
+    "transitions": {
+      "default": "transition-all duration-200 ease-in-out",
+      "hover_lift": "hover:-translate-y-0.5 hover:shadow-lg"
+    }
+  },
+  "layouts": {
+    "landing": "Top nav (Logo + Auth links), Hero section (Left text, right image), extremely generous spacing (py-24 or py-32).",
+    "auth": "Centered screen (min-h-screen flex items-center justify-center), off-white bg, white card with soft shadow.",
+    "dashboard": "Two-pane layout. Left Sidebar (w-80) for Friends/Notifications. Main Content (flex-1) for Room Grid. Grid uses gap-6.",
+    "chat_room": "Three-pane or Two-pane layout. Left: Optional Sidebar/Back. Middle: Chat History (flex-1, flex-col, overflow-y-auto). Right: Members list (w-72, hidden on mobile by default). Header fixed at top. Composer fixed at bottom."
+  },
+  "components_instructions": {
+    "buttons": "Always use pill shape (rounded-full). Primary buttons use primary blue color. Secondary buttons use ghost or outline with slate text.",
+    "inputs": "Rounded-2xl. Light border, no heavy focus rings, just a subtle primary blue focus ring (focus:ring-2 focus:ring-primary/30).",
+    "chat_bubbles": "Sent messages align right, solid primary blue, white text. Received messages align left, white bg, dark text, subtle shadow. Use border-radius tricks for tails (e.g., rounded-3xl rounded-br-sm for sent).",
+    "cards": "White background, large border radius (rounded-3xl), soft shadow. No heavy borders.",
+    "dialogs": "Use Shadcn Dialog but customize to rounded-3xl.",
+    "dropdowns": "Use Shadcn DropdownMenu for message actions (edit/delete) and member moderation.",
+    "toasts": "Use Sonner for all notifications (room invites, friend requests).",
+    "icons": "Use 'lucide-react' for all icons (friendly, rounded stroke). Ensure consistent 20px size."
+  },
+  "screens": [
+    {
+      "name": "Landing Page",
+      "description": "Hero section before login. Value proposition of RoomChat.",
+      "features": ["Hero text", "Get Started button leading to Login", "Hero image"]
+    },
+    {
+      "name": "Login Page",
+      "description": "User authentication.",
+      "features": ["Email/Username input", "Password input", "Login CTA", "Link to Register"]
+    },
+    {
+      "name": "Register Page",
+      "description": "Account creation.",
+      "features": ["Username input", "Email input", "Password input", "Confirm Password input", "Register CTA", "Link to Login"]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Main hub for the user.",
+      "features": [
+        "Create Room (Modal with Name, Password, Capacity)",
+        "Join Room (Input for 6-char code + optional password)",
+        "Friends List (Sidebar: list, send/accept/remove requests)",
+        "Notifications Panel (Room invites, friend requests)",
+        "Active Rooms Grid (Cards showing available rooms)"
+      ]
+    },
+    {
+      "name": "Chat/Room Page",
+      "description": "Live messaging interface.",
+      "features": [
+        "Room Info Header (Copyable code, capacity)",
+        "Scrollable message history",
+        "Message Composer (Input + Send)",
+        "Per-message actions on hover (Reply, Edit, Delete)",
+        "Live members sidebar (Join/Leave indication)",
+        "Owner moderation actions (Kick, Transfer owner, Delete room via dropdown)",
+        "Invite friend action"
+      ]
+    }
+  ],
+  "accessibility": {
+    "testing": "All interactive elements MUST include 'data-testid' (e.g., data-testid='login-submit-button').",
+    "contrast": "Ensure white text on primary blue has at least 4.5:1 contrast. Use focus-visible for keyboard navigation."
+  },
+  "image_urls": {
+    "hero_image": {
+      "url": "https://images.unsplash.com/photo-1758525227311-03b1cfd29cf5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzZ8MHwxfHNlYXJjaHwzfHxwZW9wbGUlMjBjaGF0dGluZyUyMHBob25lJTIwZnJpZW5kc3xlbnwwfHx8fDE3ODY3NzYzODB8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Two women looking at a phone at an outdoor cafe, representing friendly connection.",
+      "usage": "Landing page hero image side-by-side with text."
+    }
+  },
+  "mock_data_instructions": "Create a robust set of mock static data in a separate file (e.g., data/mockData.js). Include currentUser, friendsList, notifications, activeRooms, and chatMessages. Implement placeholder functions like handleLogin(e), handleSendMessage(msg), handleKickUser(userId) that log to console or update local React state. Use standard React state hooks to make the UI feel alive and interactive even without a backend.",
+  "universal_guidelines_for_main_agent": [
+    "You MUST use .js and .jsx files, NOT .tsx",
+    "DO NOT use generic centered layouts, simplistic gradients, or uniform styling.",
+    "Implement glass-morphism effects carefully; DO NOT use fully transparent backgrounds where text exists over images/patterns.",
+    "Use pill-shaped or heavily rounded buttons with interaction animations.",
+    "Every interaction needs micro-animations (hover states, transitions).",
+    "Use generous spacing (p-6, p-8).",
+    "Use 'lucide-react' for icons. Do NOT use emojis as icons.",
+    "Add 'data-testid' to all buttons, inputs, and major layout sections.",
+    "Use Shadcn components as a base but heavily customize border-radius (rounded-3xl) to match the Telegram-friendly style."
+  ]
+}

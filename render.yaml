@@ -25,11 +25,15 @@ services:
     runtime: python
     plan: free
     region: oregon
-    # '/' redirects to the dashboard; the login page is a plain 200.
-    healthCheckPath: /accounts/login/
+    # Any non-API path returns the SPA shell as a plain 200, signed in or not.
+    healthCheckPath: /login
     # migrate lives here because preDeployCommand requires a paid instance type. If it
     # ever fails at build time, move it to the front of startCommand instead — safe on a
     # single instance.
+    #
+    # No npm step: this runtime is python-only. The React bundle in static/react/ is
+    # built locally with `yarn build` and committed, and collectstatic just hashes and
+    # compresses it like any other asset.
     buildCommand: >-
       pip install -r requirements.txt &&
       python manage.py collectstatic --no-input &&
