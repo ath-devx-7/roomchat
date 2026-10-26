@@ -1,4 +1,7 @@
+alembic==1.20.1
+annotated-doc==0.0.5
 annotated-types==0.7.0
+anyio==4.14.2
 asgiref==3.11.1
 attrs==26.1.0
 autobahn==25.12.2
@@ -14,10 +17,16 @@ daphne==4.2.2
 Django==6.0.6
 dnspython==2.8.0
 email-validator==2.3.0
+fastapi==0.162.0
 hyperlink==21.0.0
 idna==3.18
 Incremental==24.11.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+Mako==1.4.3
+MarkupSafe==3.0.4
 msgpack==1.2.0
+opentelemetry-api==1.45.1
 packaging==26.2
 psycopg==3.3.4
 psycopg-binary==3.3.4
@@ -27,9 +36,13 @@ pydantic==2.13.4
 pydantic_core==2.46.4
 pyOpenSSL==26.3.0
 python-dotenv==1.2.2
+python-multipart==0.0.32
 redis==8.0.1
 service-identity==26.1.0
+sqladmin==0.32.0
+SQLAlchemy==2.1.6
 sqlparse==0.5.5
+starlette==1.10.0
 Twisted==26.4.0
 txaio==25.12.2
 typing-inspection==0.4.2
@@ -37,4 +50,5 @@ typing_extensions==4.15.0
 tzdata==2026.2
 ujson==5.13.0
 whitenoise==6.12.0
+WTForms==3.2.2
 zope.interface==8.5

@@ -8,6 +8,9 @@ Revision ID: 0001_baseline
 Revises:
 """
 
+import sqlalchemy as sa
+from alembic import op
+
 revision = '0001_baseline'
 down_revision = None
 branch_labels = None
@@ -1062,3 +1065,44 @@ ALTER TABLE ONLY public.rooms_roommembership
 \unrestrict SaVGebOLeC1obxyjZc9rXp7sS5BeWkL76An3QHTBv7s3Jxxw6XV25qKoMCVxM4Y
 
 """
+
+# Every table SCHEMA_SQL creates, dropped together by downgrade().
+TABLES = [
+    'accounts_friendship',
+    'auth_group',
+    'auth_group_permissions',
+    'auth_permission',
+    'auth_user',
+    'auth_user_groups',
+    'auth_user_user_permissions',
+    'django_admin_log',
+    'django_content_type',
+    'django_migrations',
+    'django_session',
+    'rooms_message',
+    'rooms_room',
+    'rooms_roomban',
+    'rooms_roominvitation',
+    'rooms_roommembership',
+]
+
+
+def upgrade():
+    bind = op.get_bind()
+    # A DB Django already migrated (prod on Render, which has no shell for `alembic stamp`)
+    # adopts the baseline on its first `upgrade head` instead of re-creating it.
+    if sa.inspect(bind).has_table('rooms_room'):
+        return
+    # \restrict / \unrestrict are psql meta-commands, not SQL.
+    sql = '\n'.join(
+        line for line in SCHEMA_SQL.splitlines() if not line.startswith(('\\restrict', '\\unrestrict'))
+    )
+    search_path = bind.exec_driver_sql('SHOW search_path').scalar()
+    # exec_driver_sql, not text(): the dump's `::` casts must not be parsed as bind params.
+    bind.exec_driver_sql(sql)
+    # The dump empties search_path for the session; alembic_version is written after this.
+    bind.exec_driver_sql("SELECT pg_catalog.set_config('search_path', %s, false)", (search_path,))
+
+
+def downgrade():
+    op.execute('DROP TABLE ' + ', '.join(f'public.{table}' for table in TABLES))
