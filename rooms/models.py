@@ -1,33 +1,62 @@
 import random
 import string
+from datetime import datetime
 
-from django.db import models
-from django.contrib.auth.models import User
+from sqlalchemy import (
+    BigInteger, CheckConstraint, DateTime, ForeignKey, Identity, Index, Integer, String, Text,
+    UniqueConstraint, exists, select,
+)
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
+
+from accounts.models import User, _now
+from roomchat.db import Base, db
+
+# Every FK is ON DELETE in the DB (alembic 0002); the ORM side only defers to it.
+_CASCADE = 'save-update, merge, delete'
+
+
+def _fk(target, name, ondelete='CASCADE'):
+    return ForeignKey(target, ondelete=ondelete, deferrable=True, initially='DEFERRED', name=name)
 
 
 def generate_room_code():
     """Generate a unique 6-character alphanumeric uppercase room code."""
     while True:
         code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        if not Room.objects.filter(room_code=code).exists():
+        if not db.scalar(select(exists().where(Room.room_code == code))):
             return code
 
 
-class Room(models.Model):
+class Room(Base):
     """A chat room that users can join via a unique code."""
 
-    room_code = models.CharField(max_length=6, unique=True, editable=False)
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True, default='')
-    password = models.CharField(max_length=128, blank=True, default='')
-    capacity = models.PositiveIntegerField(default=10)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_rooms')
-    created_at = models.DateTimeField(auto_now_add=True)
+    __tablename__ = 'rooms_room'
+    __table_args__ = (
+        UniqueConstraint('room_code', name='rooms_room_room_code_key'),
+        CheckConstraint('capacity >= 0', name='rooms_room_capacity_check'),
+        Index('rooms_room_owner_id_13734245', 'owner_id'),
+        Index(
+            'rooms_room_room_code_c2832b2c_like', 'room_code',
+            postgresql_ops={'room_code': 'varchar_pattern_ops'},
+        ),
+    )
 
-    def save(self, *args, **kwargs):
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    room_code: Mapped[str] = mapped_column(String(6))
+    name: Mapped[str] = mapped_column(String(100))
+    description: Mapped[str] = mapped_column(Text, default='')
+    password: Mapped[str] = mapped_column(String(128), default='')
+    capacity: Mapped[int] = mapped_column(Integer, default=10)
+    owner_id: Mapped[int] = mapped_column(_fk('auth_user.id', 'rooms_room_owner_id_13734245_fk_auth_user_id'))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    owner = relationship(User, backref=backref('owned_rooms', cascade=_CASCADE, passive_deletes=True))
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         if not self.room_code:
-            self.room_code = generate_room_code()
-        super().save(*args, **kwargs)
+            with db.no_autoflush:
+                self.room_code = generate_room_code()
 
     @property
     def active_user_count(self):
@@ -41,22 +70,32 @@ class Room(models.Model):
         return f"{self.name} ({self.room_code})"
 
 
-class RoomMembership(models.Model):
+class RoomMembership(Base):
     """Tracks currently active users in a room (created on WS connect, deleted on disconnect)."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='room_memberships')
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='memberships')
-    channel_name = models.CharField(max_length=255, blank=True, default='')
-    joined_at = models.DateTimeField(auto_now_add=True)
+    __tablename__ = 'rooms_roommembership'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'room_id', name='rooms_roommembership_user_id_room_id_f7ab799d_uniq'),
+        Index('rooms_roommembership_room_id_bc44aa96', 'room_id'),
+        Index('rooms_roommembership_user_id_22caa5ba', 'user_id'),
+    )
 
-    class Meta:
-        unique_together = ('user', 'room')
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    channel_name: Mapped[str] = mapped_column(String(255), default='')
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    room_id: Mapped[int] = mapped_column(_fk('rooms_room.id', 'rooms_roommembership_room_id_bc44aa96_fk_rooms_room_id'))
+    user_id: Mapped[int] = mapped_column(_fk('auth_user.id', 'rooms_roommembership_user_id_22caa5ba_fk_auth_user_id'))
+
+    user = relationship(User, backref=backref('room_memberships', cascade=_CASCADE, passive_deletes=True))
+    room = relationship(Room, backref=backref(
+        'memberships', lazy='dynamic', cascade=_CASCADE, passive_deletes=True
+    ))
 
     def __str__(self):
         return f"{self.user.username} in {self.room.name}"
 
 
-class RoomBan(models.Model):
+class RoomBan(Base):
     """A user removed from a room by its owner, checked at every entry point.
 
     Deliberately no expires_at: a room is deleted as soon as its last member
@@ -65,24 +104,45 @@ class RoomBan(models.Model):
     ban cannot follow it onto someone else's room.
     """
 
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='bans')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='room_bans')
+    __tablename__ = 'rooms_roomban'
+    __table_args__ = (
+        UniqueConstraint('room_id', 'user_id', name='rooms_roomban_room_id_user_id_69c6b872_uniq'),
+        Index('rooms_roomban_banned_by_id_1c95e66a', 'banned_by_id'),
+        Index('rooms_roomban_room_id_735367a8', 'room_id'),
+        Index('rooms_roomban_user_id_01545f0a', 'user_id'),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     # Audit data, not a constraint — ownership transfers, and losing the issuer
     # must not lift the ban.
-    banned_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name='bans_issued'
+    banned_by_id: Mapped[int | None] = mapped_column(
+        _fk('auth_user.id', 'rooms_roomban_banned_by_id_1c95e66a_fk_auth_user_id', ondelete='SET NULL')
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    room_id: Mapped[int] = mapped_column(_fk('rooms_room.id', 'rooms_roomban_room_id_735367a8_fk_rooms_room_id'))
+    user_id: Mapped[int] = mapped_column(_fk('auth_user.id', 'rooms_roomban_user_id_01545f0a_fk_auth_user_id'))
 
-    class Meta:
-        unique_together = ('room', 'user')
+    room = relationship(Room, backref=backref('bans', cascade=_CASCADE, passive_deletes=True))
+    user = relationship(User, foreign_keys=[user_id], backref=backref(
+        'room_bans', cascade=_CASCADE, passive_deletes=True
+    ))
+    banned_by = relationship(User, foreign_keys=[banned_by_id], backref=backref(
+        'bans_issued', passive_deletes=True
+    ))
 
     def __str__(self):
         return f"{self.user.username} banned from {self.room.name}"
 
 
-class RoomInvitation(models.Model):
+class RoomInvitation(Base):
     """An invitation to join a room, sent from one user to another."""
+
+    __tablename__ = 'rooms_roominvitation'
+    __table_args__ = (
+        Index('rooms_roominvitation_receiver_id_c11bed1f', 'receiver_id'),
+        Index('rooms_roominvitation_room_id_529657ea', 'room_id'),
+        Index('rooms_roominvitation_sender_id_19ea8b3b', 'sender_id'),
+    )
 
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -90,31 +150,51 @@ class RoomInvitation(models.Model):
         ('declined', 'Declined'),
     ]
 
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='invitations')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_invitations')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_invitations')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    status: Mapped[str] = mapped_column(String(10), default='pending')
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    receiver_id: Mapped[int] = mapped_column(
+        _fk('auth_user.id', 'rooms_roominvitation_receiver_id_c11bed1f_fk_auth_user_id')
+    )
+    room_id: Mapped[int] = mapped_column(_fk('rooms_room.id', 'rooms_roominvitation_room_id_529657ea_fk_rooms_room_id'))
+    sender_id: Mapped[int] = mapped_column(_fk('auth_user.id', 'rooms_roominvitation_sender_id_19ea8b3b_fk_auth_user_id'))
+
+    room = relationship(Room, backref=backref('invitations', cascade=_CASCADE, passive_deletes=True))
+    sender = relationship(User, foreign_keys=[sender_id], backref=backref(
+        'sent_invitations', cascade=_CASCADE, passive_deletes=True
+    ))
+    receiver = relationship(User, foreign_keys=[receiver_id], backref=backref(
+        'received_invitations', cascade=_CASCADE, passive_deletes=True
+    ))
 
     def __str__(self):
         return f"{self.sender.username} invited {self.receiver.username} to {self.room.name}"
 
 
-class Message(models.Model):
+class Message(Base):
     """A chat message within a room."""
 
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages')
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    edited_at = models.DateTimeField(null=True, blank=True)
-    is_deleted = models.BooleanField(default=False)
-    reply_to = models.ForeignKey(
-        'self', null=True, blank=True, on_delete=models.SET_NULL, related_name='replies'
+    __tablename__ = 'rooms_message'
+    __table_args__ = (
+        Index('rooms_message_reply_to_id_34dd708a', 'reply_to_id'),
+        Index('rooms_message_room_id_ec9477f2', 'room_id'),
+        Index('rooms_message_sender_id_05bf05fe', 'sender_id'),
     )
 
-    class Meta:
-        ordering = ['created_at']
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_deleted: Mapped[bool] = mapped_column(default=False)
+    reply_to_id: Mapped[int | None] = mapped_column(
+        _fk('rooms_message.id', 'rooms_message_reply_to_id_34dd708a_fk_rooms_message_id', ondelete='SET NULL')
+    )
+    sender_id: Mapped[int] = mapped_column(_fk('auth_user.id', 'rooms_message_sender_id_05bf05fe_fk_auth_user_id'))
+    room_id: Mapped[int] = mapped_column(_fk('rooms_room.id', 'rooms_message_room_id_ec9477f2_fk_rooms_room_id'))
+
+    room = relationship(Room, backref=backref('messages', cascade=_CASCADE, passive_deletes=True))
+    sender = relationship(User, backref=backref('messages', cascade=_CASCADE, passive_deletes=True))
+    reply_to = relationship('Message', remote_side=[id], backref=backref('replies', passive_deletes=True))
 
     def __str__(self):
         return f"{self.sender.username}: {self.content[:50]}"

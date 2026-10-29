@@ -1,9 +1,27 @@
-"""Shared helpers for API views: pydantic error formatting and JSON-safe auth."""
+"""Shared helpers for API views: pydantic error formatting, JSON-safe auth, and the
+JSON error handlers that keep every error in the `{"error": ...}` shape."""
 
 from functools import wraps
 
-from django.http import JsonResponse
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+
+
+class JsonResponse(JSONResponse):
+    """JSONResponse that accepts Django's `status=` keyword, so existing
+    `return JsonResponse({...}, status=400)` lines work unchanged."""
+
+    def __init__(self, data, status=200, **kwargs):
+        super().__init__(data, status_code=status, **kwargs)
+
+
+async def form_data(request: Request):
+    """Dependency that returns the parsed form body; replaces Django's `request.POST`.
+
+    Used in views as `form = Depends(form_data)`, then `form.get('username')`.
+    """
+    return await request.form()
 
 
 def api_login_required(view_func):
@@ -55,3 +73,30 @@ def format_pydantic_errors(exc: ValidationError) -> dict[str, str]:
             msg = "Enter a valid email address."
         errors[str(loc)] = msg
     return errors
+
+
+# --- Error handlers -------------------------------------------------------------------
+# Registered on the app in P3. They replace Django's HTML error pages, so the SPA always
+# receives the same `{"error": ...}` shape it already shows to the user.
+
+async def not_found(request, exc):
+    """404 for any path no route matches."""
+    return JsonResponse({'error': 'Not found.'}, status=404)
+
+
+async def method_not_allowed(request, exc):
+    """405 when a route exists but not for this HTTP method."""
+    # Keep the `Allow` header Starlette attaches (lists the methods that are allowed).
+    return JsonResponse({'error': 'Method not allowed.'}, status=405, headers=exc.headers)
+
+
+async def server_error(request, exc):
+    """500 for any unhandled exception (with DEBUG on, Starlette shows a traceback instead)."""
+    return JsonResponse({'error': 'Server error.'}, status=500)
+
+
+exception_handlers = {
+    404: not_found,
+    405: method_not_allowed,
+    500: server_error,
+}
