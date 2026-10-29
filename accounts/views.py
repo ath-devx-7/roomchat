@@ -1,17 +1,19 @@
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from django.http import JsonResponse
-from django.db.models import Q
+from fastapi import Depends, Request
+from sqlalchemy import and_, exists, or_, select
 
 from pydantic import ValidationError
 
-from roomchat.errors import api_login_required, format_pydantic_errors, require_POST_json
+from roomchat.auth import authenticate, create_user, login, logout
+from roomchat.db import db
+from roomchat.errors import (
+    JsonResponse, api_login_required, form_data, format_pydantic_errors, require_POST_json,
+)
 from roomchat.middleware import json_validation_errors
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from .models import Friendship
+from .models import Friendship, User
 from .schemas import (
     AuthUserResponse,
     UserCreate,
@@ -46,30 +48,31 @@ def user_payload(user) -> dict:
 
 
 @require_POST_json
-def register_api(request):
+def register_api(request: Request, form=Depends(form_data)):
     """Create an account and sign the new user in."""
     if request.user.is_authenticated:
         return JsonResponse({'error': 'Already signed in.'}, status=400)
 
     try:
         user_data = UserCreate(
-            username=request.POST.get('username', ''),
-            email=request.POST.get('email', ''),
+            username=form.get('username', ''),
+            email=form.get('email', ''),
             # Passwords are never stripped — trimming one silently changes it.
-            password=request.POST.get('password', ''),
-            confirm_password=request.POST.get('confirm_password', ''),
+            password=form.get('password', ''),
+            confirm_password=form.get('confirm_password', ''),
         )
     except ValidationError as e:
         return JsonResponse({'errors': format_pydantic_errors(e)}, status=400)
 
     # Keyed under 'username' so the SPA can pin the message to that field, matching
     # how format_pydantic_errors reports every other registration failure.
-    if User.objects.filter(username=user_data.username).exists():
+    # SELECT EXISTS(... WHERE username = ?) — True/False without loading the row.
+    if db.scalar(select(exists().where(User.username == user_data.username))):
         return JsonResponse(
             {'errors': {'username': 'A user with that username already exists.'}}, status=400
         )
 
-    user = User.objects.create_user(
+    user = create_user(
         username=user_data.username,
         email=user_data.email,
         password=user_data.password,
@@ -79,15 +82,15 @@ def register_api(request):
 
 
 @require_POST_json
-def login_api(request):
+def login_api(request: Request, form=Depends(form_data)):
     """Authenticate and open a session."""
     if request.user.is_authenticated:
         return JsonResponse({'error': 'Already signed in.'}, status=400)
 
     try:
         login_data = UserLogin(
-            username=request.POST.get('username', ''),
-            password=request.POST.get('password', ''),
+            username=form.get('username', ''),
+            password=form.get('password', ''),
         )
     except ValidationError as e:
         return JsonResponse({'errors': format_pydantic_errors(e)}, status=400)
@@ -103,24 +106,24 @@ def login_api(request):
 
 
 @require_POST_json
-def logout_api(request):
+def logout_api(request: Request):
     """End the session. POST-only, so a stray link or prefetch cannot sign a user out."""
     logout(request)
     return JsonResponse({'success': True})
 
 
 @api_login_required
-def me_api(request):
+def me_api(request: Request):
     """The signed-in user. The SPA bootstraps from window.__ROOMCHAT__ and only calls
     this to re-check a session it suspects has expired."""
     return JsonResponse({'user': user_payload(request.user)})
 
 
 @api_login_required
-def send_friend_request(request):
+def send_friend_request(request: Request, form=Depends(form_data)):
     """Send a friend request to another user (AJAX)."""
     if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
+        username = form.get('username', '').strip()
 
         if not username:
             return JsonResponse({'error': 'Username is required.'}, status=400)
@@ -128,16 +131,18 @@ def send_friend_request(request):
         if username == request.user.username:
             return JsonResponse({'error': 'You cannot send a friend request to yourself.'}, status=400)
 
-        try:
-            receiver = User.objects.get(username=username)
-        except User.DoesNotExist:
+        # .one_or_none() returns the single matching row, or None (Django's DoesNotExist).
+        receiver = db.scalars(select(User).where(User.username == username)).one_or_none()
+        if receiver is None:
             return JsonResponse({'error': 'User not found.'}, status=404)
 
         # Check for existing friendship in either direction
-        existing = Friendship.objects.filter(
-            Q(sender=request.user, receiver=receiver) |
-            Q(sender=receiver, receiver=request.user)
-        ).first()
+        # (or_/and_ = Django's Q(...) | Q(...); comparing a relationship to a User
+        # compares the foreign key, e.g. sender_id = request.user.id).
+        existing = db.scalars(select(Friendship).where(or_(
+            and_(Friendship.sender == request.user, Friendship.receiver == receiver),
+            and_(Friendship.sender == receiver, Friendship.receiver == request.user),
+        ))).first()
 
         if existing:
             if existing.status == 'accepted':
@@ -145,7 +150,9 @@ def send_friend_request(request):
             else:
                 return JsonResponse({'error': 'A friend request already exists.'}, status=400)
 
-        friendship = Friendship.objects.create(sender=request.user, receiver=receiver, status='pending')
+        friendship = Friendship(sender=request.user, receiver=receiver, status='pending')
+        db.add(friendship)
+        db.commit()  # rule 2: committed before notify_friend_request publishes it
         notify_friend_request(friendship)
         return JsonResponse({'success': True, 'message': f'Friend request sent to {username}.'})
 
@@ -153,53 +160,58 @@ def send_friend_request(request):
 
 
 @api_login_required
-def accept_friend_request(request, friendship_id):
+def accept_friend_request(request: Request, friendship_id: int):
     """Accept a pending friend request (AJAX)."""
     if request.method == 'POST':
-        try:
-            friendship = Friendship.objects.get(
-                id=friendship_id, receiver=request.user, status='pending'
-            )
-        except Friendship.DoesNotExist:
+        friendship = db.scalars(select(Friendship).where(
+            Friendship.id == friendship_id,
+            Friendship.receiver == request.user,
+            Friendship.status == 'pending',
+        )).one_or_none()
+        if friendship is None:
             return JsonResponse({'error': 'Friend request not found.'}, status=404)
 
         friendship.status = 'accepted'
-        friendship.save()
+        db.commit()  # Django's .save()
         return JsonResponse({'success': True, 'message': f'You are now friends with {friendship.sender.username}.'})
 
     return JsonResponse({'error': 'Invalid request.'}, status=400)
 
 
 @api_login_required
-def reject_friend_request(request, friendship_id):
+def reject_friend_request(request: Request, friendship_id: int):
     """Reject (delete) a pending friend request (AJAX)."""
     if request.method == 'POST':
-        try:
-            friendship = Friendship.objects.get(
-                id=friendship_id, receiver=request.user, status='pending'
-            )
-        except Friendship.DoesNotExist:
+        friendship = db.scalars(select(Friendship).where(
+            Friendship.id == friendship_id,
+            Friendship.receiver == request.user,
+            Friendship.status == 'pending',
+        )).one_or_none()
+        if friendship is None:
             return JsonResponse({'error': 'Friend request not found.'}, status=404)
 
-        friendship.delete()
+        db.delete(friendship)
+        db.commit()
         return JsonResponse({'success': True, 'message': 'Friend request rejected.'})
 
     return JsonResponse({'error': 'Invalid request.'}, status=400)
 
 
 @api_login_required
-def remove_friend(request, friendship_id):
+def remove_friend(request: Request, friendship_id: int):
     """Remove an existing friend (AJAX)."""
     if request.method == 'POST':
-        try:
-            friendship = Friendship.objects.get(
-                Q(id=friendship_id, status='accepted'),
-                Q(sender=request.user) | Q(receiver=request.user)
-            )
-        except Friendship.DoesNotExist:
+        # Several .where() conditions are ANDed, like Django's comma-separated Q()s.
+        friendship = db.scalars(select(Friendship).where(
+            Friendship.id == friendship_id,
+            Friendship.status == 'accepted',
+            or_(Friendship.sender == request.user, Friendship.receiver == request.user),
+        )).one_or_none()
+        if friendship is None:
             return JsonResponse({'error': 'Friendship not found.'}, status=404)
 
-        friendship.delete()
+        db.delete(friendship)
+        db.commit()
         return JsonResponse({'success': True, 'message': 'Friend removed.'})
 
     return JsonResponse({'error': 'Invalid request.'}, status=400)
@@ -207,14 +219,16 @@ def remove_friend(request, friendship_id):
 
 @api_login_required
 @json_validation_errors
-def friends_list_api(request):
+def friends_list_api(request: Request):
     """Return friends and pending requests as JSON."""
-    friendships = Friendship.objects.filter(
-        Q(sender=request.user, status='accepted') |
-        Q(receiver=request.user, status='accepted')
-    )
+    friendships = db.scalars(select(Friendship).where(or_(
+        and_(Friendship.sender == request.user, Friendship.status == 'accepted'),
+        and_(Friendship.receiver == request.user, Friendship.status == 'accepted'),
+    ))).all()
     friends_list = []
     for f in friendships:
+        # request.user was loaded in this same db session, so f.sender is the very same
+        # object when it's this user (the session's identity map), and `==` works.
         friend_user = f.receiver if f.sender == request.user else f.sender
         friends_list.append(FriendItemResponse(
             id=f.id,
@@ -222,9 +236,9 @@ def friends_list_api(request):
             username=friend_user.username
         ))
 
-    pending_received = Friendship.objects.filter(
-        receiver=request.user, status='pending'
-    )
+    pending_received = db.scalars(select(Friendship).where(
+        Friendship.receiver == request.user, Friendship.status == 'pending'
+    )).all()
     pending_received_list = [
         FriendPendingReceivedResponse(
             id=f.id,
@@ -235,9 +249,9 @@ def friends_list_api(request):
         for f in pending_received
     ]
 
-    pending_sent = Friendship.objects.filter(
-        sender=request.user, status='pending'
-    )
+    pending_sent = db.scalars(select(Friendship).where(
+        Friendship.sender == request.user, Friendship.status == 'pending'
+    )).all()
     pending_sent_list = [
         FriendPendingSentResponse(
             id=f.id,

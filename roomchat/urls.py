@@ -6,19 +6,46 @@ catch-all, which serves the React shell so client-side routes (/, /login, /dashb
 /room/<code>) survive a hard refresh or a pasted link.
 """
 
-from django.contrib import admin
-from django.urls import path, re_path, include
+from starlette.convertors import Convertor, register_url_convertor
+from starlette.staticfiles import StaticFiles
 
+from accounts.urls import urlpatterns as accounts_urls
+from roomchat import settings
+from rooms.urls import urlpatterns as rooms_urls
 from rooms.views import spa
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/', include('accounts.urls')),
-    path('api/', include('rooms.urls')),
 
-    # Must stay last. 'static' and 'media' are excluded defensively — WhiteNoise
-    # middleware already answers /static/ before URL resolution runs, but in DEBUG
-    # a missing asset would otherwise be served the HTML shell with a 200 instead of
-    # a 404, which is a genuinely confusing thing to debug.
-    re_path(r'^(?!static/|media/|api/|admin/|ws/).*$', spa, name='spa'),
-]
+class SpaPathConvertor(Convertor):
+    """URL converter for the catch-all: matches any path except the reserved prefixes.
+
+    Same regex the Django re_path used. `(?!...)` is a negative lookahead: "match, but
+    only if the path does NOT start with one of these".
+    """
+
+    regex = r'(?!static/|media/|api/|admin/|ws/).*'
+
+    def convert(self, value):
+        """URL text -> view argument (unchanged)."""
+        return value
+
+    def to_string(self, value):
+        """View argument -> URL text (unchanged)."""
+        return value
+
+
+# Makes `{path:spa}` usable in route paths, like Starlette's built-in `{x:int}`.
+register_url_convertor('spa', SpaPathConvertor())
+
+
+def include_urls(app):
+    """Attach every route to the app, in order. Routes are tried top to bottom."""
+    app.include_router(accounts_urls, prefix='/api')
+    app.include_router(rooms_urls, prefix='/api')
+    app.mount('/' + settings.STATIC_URL.rstrip('/'), StaticFiles(directory=settings.STATICFILES_DIRS[0]), name='static')
+
+    # Must stay last: it matches almost every path, so any route added after it would
+    # never be reached. The prefixes are excluded so a missing /api/ or /static/ URL
+    # gets a JSON 404 instead of the HTML shell with a 200 (a confusing thing to debug),
+    # and so the trailing-slash redirect (/api/auth/me -> /api/auth/me/) still fires:
+    # Starlette only redirects when no route matches.
+    app.add_api_route('/{path:spa}', spa, methods=['GET', 'HEAD'], name='spa')

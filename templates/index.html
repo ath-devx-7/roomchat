@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -11,25 +11,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{% static 'react/css/main.css' %}">
+    <link rel="stylesheet" href="{{ static('react/css/main.css') }}">
 </head>
 <body>
     <noscript>You need to enable JavaScript to run RoomChat.</noscript>
     <div id="root"></div>
 
     {# The SPA's only channel for server-side values. Asset URLs MUST come through here: #}
-    {# CompressedManifestStaticFilesStorage renames collected files, so a /static/... path #}
-    {# hardcoded in the bundle would 404 in production. Bootstrapping the user also saves #}
+    {# static() adds the ?v=<hash> that makes browsers fetch a rebuilt file, which a #}
+    {# /static/... path hardcoded in the bundle would never get. Bootstrapping the user also saves #}
     {# a round-trip and lets the router redirect without an authentication flash. #}
-    {# json_script, not |safe: it escapes < > &, so a username containing "</script>" #}
+    {# tojson, not |safe: it escapes < > & ', so a username containing "</script>" #}
     {# cannot break out of the block. #}
-    {{ bootstrap|json_script:"roomchat-bootstrap" }}
+    <script id="roomchat-bootstrap" type="application/json">{{ bootstrap|tojson }}</script>
     <script>
         window.__ROOMCHAT__ = JSON.parse(
             document.getElementById("roomchat-bootstrap").textContent
         );
     </script>
 
-    <script src="{% static 'react/js/main.js' %}"></script>
+    <script src="{{ static('react/js/main.js') }}"></script>
 </body>
 </html>
