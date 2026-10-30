@@ -11,6 +11,7 @@ from starlette.staticfiles import StaticFiles
 
 from accounts.urls import urlpatterns as accounts_urls
 from roomchat import settings
+from rooms.routing import websocket_urlpatterns
 from rooms.urls import urlpatterns as rooms_urls
 from rooms.views import spa
 
@@ -42,6 +43,10 @@ def include_urls(app):
     app.include_router(accounts_urls, prefix='/api')
     app.include_router(rooms_urls, prefix='/api')
     app.mount('/' + settings.STATIC_URL.rstrip('/'), StaticFiles(directory=settings.STATICFILES_DIRS[0]), name='static')
+    # WebSocket routes (/ws/chat/<code>/, /ws/notifications/). They only match WebSocket
+    # connections, and the catch-all below only matches HTTP, so either order would work;
+    # they sit here so the catch-all stays visibly last.
+    app.router.routes.extend(websocket_urlpatterns)
 
     # Must stay last: it matches almost every path, so any route added after it would
     # never be reached. The prefixes are excluded so a missing /api/ or /static/ URL

@@ -1,15 +1,16 @@
 import json
 from importlib import import_module
 
-from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
-from django.conf import settings
-from django.contrib.auth.models import User
-from django.db import transaction
-from django.utils import timezone
+from roomchat.realtime import AsyncWebsocketConsumer
+from roomchat.realtime import database_sync_to_async
+from roomchat import settings
+from accounts.models import User, _now
 from pydantic import ValidationError, TypeAdapter, Field
+from sqlalchemy import delete, exists, select
+from sqlalchemy.orm import joinedload
 from typing import Union, Annotated
 
+from roomchat.db import db
 from roomchat.errors import format_pydantic_errors
 
 from .models import Room, RoomBan, RoomMembership, Message
@@ -396,22 +397,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_room(self):
-        try:
-            return Room.objects.get(room_code=self.room_code)
-        except Room.DoesNotExist:
-            return None
+        # .one_or_none() gives the room or None (Django raised Room.DoesNotExist).
+        return db.scalars(select(Room).where(Room.room_code == self.room_code)).one_or_none()
 
     @database_sync_to_async
     def is_room_full(self):
+        # Rule 5: self.room was loaded by an earlier call's (closed) session; attach it to
+        # this call's session so the memberships count can run.
+        self.room = db.merge(self.room, load=False)
         return self.room.is_full
 
     @database_sync_to_async
     def is_member(self):
-        return RoomMembership.objects.filter(user=self.user, room=self.room).exists()
+        # .filter(...).exists() -> SELECT EXISTS(...)
+        return db.scalar(select(exists().where(RoomMembership.user == self.user, RoomMembership.room == self.room)))
 
     @database_sync_to_async
     def is_banned(self):
-        return RoomBan.objects.filter(room=self.room, user=self.user).exists()
+        return db.scalar(select(exists().where(RoomBan.room == self.room, RoomBan.user == self.user)))
 
     @database_sync_to_async
     def revoke_room_grant(self):
@@ -435,20 +438,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def create_membership(self):
-        RoomMembership.objects.update_or_create(
-            user=self.user,
-            room=self.room,
-            defaults={'channel_name': self.channel_name},
-        )
+        # Rule 5, widened in P4: self.room may carry its own loaded copy of the owner, and
+        # for the owner that is the same user as self.user. Merging both gives this session
+        # one copy of each, so adding the new row can't trip over a duplicate.
+        self.room = db.merge(self.room, load=False)
+        self.user = db.merge(self.user, load=False)
+        # update_or_create: update the existing row's channel_name, or add a new row.
+        membership = db.scalars(
+            select(RoomMembership).where(RoomMembership.user == self.user, RoomMembership.room == self.room)
+        ).first()
+        if membership is None:
+            db.add(RoomMembership(user=self.user, room=self.room, channel_name=self.channel_name))
+        else:
+            membership.channel_name = self.channel_name
+        db.commit()
 
     @database_sync_to_async
     def delete_membership(self):
-        RoomMembership.objects.filter(user=self.user, room=self.room).delete()
+        # .filter(...).delete() -> one DELETE statement.
+        db.execute(delete(RoomMembership).where(RoomMembership.user == self.user, RoomMembership.room == self.room))
+        db.commit()
 
     @database_sync_to_async
     def get_active_users(self):
         from .schemas import WSActiveUserItem
-        memberships = RoomMembership.objects.filter(room=self.room).select_related('user')
+        # select_related('user') -> joinedload: users come back in the same query.
+        memberships = db.scalars(
+            select(RoomMembership).where(RoomMembership.room == self.room).options(joinedload(RoomMembership.user))
+        ).all()
         return [
             WSActiveUserItem(
                 user_id=m.user.id,
@@ -461,7 +478,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_room_info(self):
         # Refresh from DB
-        room = Room.objects.get(pk=self.room.pk)
+        # .get(pk=...) -> .one(): raises if the row is gone, as Django's .get() did.
+        room = db.scalars(select(Room).where(Room.id == self.room.id)).one()
         self.room = room
         return WSRoomInfoEvent(
             owner_id=room.owner_id,
@@ -473,79 +491,94 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, content, reply_to_id=None):
+        self.room = db.merge(self.room, load=False)  # rule 5 (widened, see create_membership)
+        self.user = db.merge(self.user, load=False)
         reply_to = None
         if reply_to_id:
-            try:
-                reply_to = Message.objects.get(id=reply_to_id, room=self.room)
-            except Message.DoesNotExist:
-                pass
-        return Message.objects.create(
+            # .get() in try/except DoesNotExist -> .one_or_none(): stays None when missing.
+            reply_to = db.scalars(
+                select(Message).where(Message.id == reply_to_id, Message.room == self.room)
+            ).one_or_none()
+        # .objects.create(...) -> construct, add, commit.
+        message = Message(
             room=self.room,
             sender=self.user,
             content=content,
             reply_to=reply_to,
         )
+        db.add(message)
+        db.commit()
+        return message
 
     @database_sync_to_async
     def get_message_preview(self, message_id):
-        try:
-            msg = Message.objects.select_related('sender').get(id=message_id, room=self.room)
-            if msg.is_deleted:
-                return {
-                    'message_id': msg.id,
-                    'sender_username': msg.sender.username,
-                    'content': 'This message was deleted.',
-                }
+        # select_related('sender').get(...) -> joinedload + .one_or_none(), same None branch.
+        msg = db.scalars(
+            select(Message).where(Message.id == message_id, Message.room == self.room)
+            .options(joinedload(Message.sender))
+        ).one_or_none()
+        if msg is None:
+            return None
+        if msg.is_deleted:
             return {
                 'message_id': msg.id,
                 'sender_username': msg.sender.username,
-                'content': msg.content[:100],
+                'content': 'This message was deleted.',
             }
-        except Message.DoesNotExist:
-            return None
+        return {
+            'message_id': msg.id,
+            'sender_username': msg.sender.username,
+            'content': msg.content[:100],
+        }
 
     @database_sync_to_async
     def update_message(self, message_id, new_content):
-        try:
-            msg = Message.objects.get(id=message_id, sender=self.user, room=self.room, is_deleted=False)
-            msg.content = new_content
-            msg.edited_at = timezone.now()
-            msg.save()
-            return msg.edited_at
-        except Message.DoesNotExist:
+        msg = db.scalars(select(Message).where(
+            Message.id == message_id, Message.sender == self.user, Message.room == self.room,
+            Message.is_deleted == False,  # noqa: E712 (SQL comparison, not a Python bool test)
+        )).one_or_none()
+        if msg is None:
             return None
+        msg.content = new_content
+        msg.edited_at = _now()
+        db.commit()  # .save()
+        return msg.edited_at
 
     @database_sync_to_async
     def soft_delete_message(self, message_id):
-        try:
-            msg = Message.objects.get(id=message_id, sender=self.user, room=self.room, is_deleted=False)
-            msg.is_deleted = True
-            msg.content = 'This message was deleted.'
-            msg.save()
-            return True
-        except Message.DoesNotExist:
+        msg = db.scalars(select(Message).where(
+            Message.id == message_id, Message.sender == self.user, Message.room == self.room,
+            Message.is_deleted == False,  # noqa: E712 (SQL comparison, not a Python bool test)
+        )).one_or_none()
+        if msg is None:
             return False
+        msg.is_deleted = True
+        msg.content = 'This message was deleted.'
+        db.commit()  # .save()
+        return True
 
     @database_sync_to_async
     def check_is_owner(self):
-        room = Room.objects.get(pk=self.room.pk)
+        # .get(pk=...) -> .one(): raises if the row is gone, as Django's .get() did.
+        room = db.scalars(select(Room).where(Room.id == self.room.id)).one()
         self.room = room
         return room.owner_id == self.user.id
 
     @database_sync_to_async
     def get_username(self, user_id):
-        try:
-            return User.objects.get(id=user_id).username
-        except User.DoesNotExist:
+        user = db.scalars(select(User).where(User.id == user_id)).one_or_none()
+        if user is None:
             return 'Unknown'
+        return user.username
 
     @database_sync_to_async
     def get_member_channel(self, user_id):
-        try:
-            m = RoomMembership.objects.get(user_id=user_id, room=self.room)
-            return m.channel_name
-        except RoomMembership.DoesNotExist:
+        m = db.scalars(
+            select(RoomMembership).where(RoomMembership.user_id == user_id, RoomMembership.room == self.room)
+        ).one_or_none()
+        if m is None:
             return None
+        return m.channel_name
 
     @database_sync_to_async
     def ban_member(self, user_id):
@@ -557,51 +590,63 @@ class ChatConsumer(AsyncWebsocketConsumer):
         changes that — without this check an owner could lock out arbitrary
         user IDs who were never in the room.
         """
-        with transaction.atomic():
-            membership = RoomMembership.objects.filter(
-                room=self.room, user_id=user_id
-            ).first()
-            if membership is None or user_id == self.room.owner_id:
-                return False
-            RoomBan.objects.get_or_create(
-                room=self.room, user_id=user_id, defaults={'banned_by': self.user},
-            )
-            membership.delete()
+        self.room = db.merge(self.room, load=False)  # rule 5
+        self.user = db.merge(self.user, load=False)  # widened, see create_membership
+        # transaction.atomic() -> one block ending in a single commit; an early return
+        # leaves without committing, and the closed session rolls back.
+        membership = db.scalars(
+            select(RoomMembership).where(RoomMembership.room == self.room, RoomMembership.user_id == user_id)
+        ).first()
+        if membership is None or user_id == self.room.owner_id:
+            return False
+        # get_or_create: add the ban only if there isn't one already.
+        ban = db.scalars(select(RoomBan).where(RoomBan.room == self.room, RoomBan.user_id == user_id)).first()
+        if ban is None:
+            db.add(RoomBan(room=self.room, user_id=user_id, banned_by=self.user))
+        db.delete(membership)
+        db.commit()
         return True
 
     @database_sync_to_async
     def transfer_room_ownership(self, target_user_id):
-        try:
-            target_user = User.objects.get(id=target_user_id)
-            # Ensure target is a member
-            if not RoomMembership.objects.filter(user=target_user, room=self.room).exists():
-                return None
-            self.room.owner = target_user
-            self.room.save()
-            return target_user.username
-        except User.DoesNotExist:
+        self.room = db.merge(self.room, load=False)  # rule 5
+        target_user = db.scalars(select(User).where(User.id == target_user_id)).one_or_none()
+        if target_user is None:
             return None
+        # Ensure target is a member
+        if not db.scalar(select(exists().where(RoomMembership.user == target_user, RoomMembership.room == self.room))):
+            return None
+        self.room.owner = target_user
+        db.commit()  # .save()
+        return target_user.username
 
     @database_sync_to_async
     def delete_room_from_db(self):
+        self.room = db.merge(self.room, load=False)  # rule 5
         # Delete all memberships first
-        RoomMembership.objects.filter(room=self.room).delete()
-        self.room.delete()
+        db.execute(delete(RoomMembership).where(RoomMembership.room == self.room))
+        db.commit()
+        db.delete(self.room)
+        db.commit()
 
     @database_sync_to_async
     def create_room_invitation(self, target_user_id):
+        self.room = db.merge(self.room, load=False)  # rule 5 (widened, see create_membership)
+        self.user = db.merge(self.user, load=False)
         return services.create_room_invitation(self.user, self.room, target_user_id)
 
     @database_sync_to_async
     def check_and_delete_room_if_empty(self):
+        self.room = db.merge(self.room, load=False)  # rule 5
         try:
             # Check if the room still exists in the database
-            if not Room.objects.filter(pk=self.room.pk).exists():
+            if not db.scalar(select(exists().where(Room.id == self.room.id))):
                 return True
 
-            members_count = RoomMembership.objects.filter(room=self.room).count()
+            members_count = self.room.memberships.count()
             if members_count == 0:
-                self.room.delete()
+                db.delete(self.room)
+                db.commit()
                 return True
             return False
         except Exception:

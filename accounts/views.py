@@ -11,7 +11,7 @@ from roomchat.errors import (
 from roomchat.middleware import json_validation_errors
 
 from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
+from roomchat.realtime import get_channel_layer
 
 from .models import Friendship, User
 from .schemas import (
