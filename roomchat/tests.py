@@ -76,7 +76,7 @@ BASE_URL = f'http://{HOST}'
 def _check_redis_is_idle():
     """Stop the run if Redis is unreachable or a dev server is already listening on it.
 
-    Redis pub/sub ignores the DB number, so a running daphne on the same Redis would share
+    Redis pub/sub ignores the DB number, so a running dev server on the same Redis would share
     group names like asgi__group__user_1 with the tests and receive their broadcasts.
     """
     client = redis.Redis.from_url(settings.REDIS_URL)

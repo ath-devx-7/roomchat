@@ -57,8 +57,8 @@ class RedisChannelLayer:
         """Return the _LoopLayer for the event loop that is running right now.
 
         Why one per loop: a Redis connection belongs to the loop that opened it and can't be
-        used from another one. daphne runs one loop for every socket, so they all share one
-        connection. But notify_friend_request (a sync HTTP view on a worker thread) calls
+        used from another one. The server runs one loop per process for every socket, so
+        they all share one connection. But notify_friend_request (a sync HTTP view on a worker thread) calls
         async_to_sync(group_send), and asgiref runs that on a brand-new short-lived loop.
         Keying by loop gives that call its own connection, closed when its loop closes.
         """
@@ -359,7 +359,8 @@ class AsyncWebsocketConsumer:
 
     Subclasses override connect / receive / disconnect and add one method per layer event
     type. Everything else matches channels.generic.websocket.AsyncWebsocketConsumer, except
-    that send() after our own close() is dropped instead of raising.
+    that send() after our own close(), or after the browser has gone, is dropped instead of
+    raising.
     """
 
     channel_layer_alias = 'default'
@@ -453,25 +454,39 @@ class AsyncWebsocketConsumer:
 
     # --- sending to the browser
 
+    async def _send_to_browser(self, message):
+        """Hand one message to the server, or drop it if the browser has already gone.
+
+        The ASGI spec has the server raise an OSError when the app sends on a socket the
+        browser has left (uvicorn raises ClientDisconnected; daphne dropped the send).
+        Letting it escape would end the consumer before disconnect() runs and orphan its
+        membership row. So treat the socket as closed and drop the message instead: the
+        server has already queued websocket.disconnect, which runs disconnect() next.
+        """
+        try:
+            await self.base_send(message)
+        except OSError:
+            self._closing = True
+
     async def accept(self, subprotocol=None, headers=None):
         """Accept the socket (finishes the handshake)."""
         message = {'type': 'websocket.accept', 'subprotocol': subprotocol}
         if headers:
             message['headers'] = list(headers)
-        await self.base_send(message)
+        await self._send_to_browser(message)
 
     async def send(self, text_data=None, bytes_data=None, close=False):
         """Send a text or bytes frame to the browser, optionally closing afterwards."""
         if getattr(self, '_closing', False):
             # We already closed this socket. A layer event can still be queued behind the
             # close (e.g. the kick broadcast reaching the kicked user right after user_kicked);
-            # sending it would hit a half-closed socket and crash the consumer before
-            # disconnect() runs. Drop it, as daphne itself does once the close completes.
+            # uvicorn raises on any send after a close, which would crash the consumer
+            # before disconnect() runs. So we drop it ourselves.
             return
         if text_data is not None:
-            await self.base_send({'type': 'websocket.send', 'text': text_data})
+            await self._send_to_browser({'type': 'websocket.send', 'text': text_data})
         elif bytes_data is not None:
-            await self.base_send({'type': 'websocket.send', 'bytes': bytes_data})
+            await self._send_to_browser({'type': 'websocket.send', 'bytes': bytes_data})
         else:
             raise ValueError('You must pass one of bytes_data or text_data')
         if close:
@@ -485,12 +500,15 @@ class AsyncWebsocketConsumer:
         the handshake (HTTP 403), and the browser reports 1006. That's why reject() in
         rooms/consumers.py accepts first and then closes.
         """
+        if getattr(self, '_closing', False):
+            # Already closed (by us, or the browser left): uvicorn raises on a second close.
+            return
         message = {'type': 'websocket.close'}
         if code is not None and code is not True:
             message['code'] = code
         if reason:
             message['reason'] = reason
-        await self.base_send(message)
+        await self._send_to_browser(message)
         self._closing = True
 
 
