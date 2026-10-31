@@ -1,26 +1,247 @@
-import asyncio
-from unittest.mock import Mock
+"""RoomChat test suite (pytest + pytest-asyncio).
 
-from channels.layers import get_channel_layer
-from channels.routing import URLRouter
-from channels.testing import WebsocketCommunicator
-from channels_redis.pubsub import RedisPubSubChannelLayer
-from django.conf import settings
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import User
-from django.test import SimpleTestCase, TestCase, TransactionTestCase
-from pydantic import ValidationError
+Run with `.venv/bin/pytest`. It needs Postgres and Redis up, and no dev server using the
+same Redis. The suite builds its own database, test_<DB_NAME>, and drops it at the end.
+"""
 
-from accounts.models import Friendship
-from accounts.schemas import UserCreate
-from rooms import services
-from rooms.consumers import CLOSE_BANNED, CLOSE_NOT_AUTHENTICATED, ChatConsumer
-from rooms.models import Message, Room, RoomBan, RoomInvitation, RoomMembership
-from rooms.routing import websocket_urlpatterns
-from rooms.schemas import RoomCreate, WSFriendRequestReceivedEvent
-from roomchat.errors import format_pydantic_errors
-from roomchat.middleware import PydanticValidationErrorMiddleware, json_validation_errors
+import os
+from pathlib import Path
 
+from dotenv import dotenv_values
+
+# --- Test settings: must run before anything imports roomchat.settings ------------------
+# roomchat/db.py builds the engine from DB_NAME the moment it is imported, so the test DB
+# name has to be in the environment first. Otherwise TRUNCATE would wipe the dev DB.
+# Env vars that are already set win over .env, so these lines override it.
+_BASE_DIR = Path(__file__).resolve().parent.parent
+_dev_db_name = os.environ.get('DB_NAME') or dotenv_values(_BASE_DIR / '.env').get('DB_NAME')
+if not _dev_db_name:
+    raise RuntimeError('DB_NAME is not set (env or .env), so there is no test DB name to derive.')
+os.environ['DB_NAME'] = f'test_{_dev_db_name}'
+os.environ['DEBUG'] = 'True'  # cookies without Secure, so the http test client sends them
+os.environ['ALLOWED_HOSTS'] = '127.0.0.1'  # the host the test client and sockets use
+os.environ['CSRF_TRUSTED_ORIGINS'] = ''
+
+# Project imports come after the lines above on purpose.
+import asyncio  # noqa: E402
+import json  # noqa: E402
+from urllib.parse import unquote, urlsplit  # noqa: E402
+
+import pytest  # noqa: E402
+import redis  # noqa: E402
+from alembic import command as alembic_command  # noqa: E402
+from alembic.config import Config as AlembicConfig  # noqa: E402
+from asgiref.testing import ApplicationCommunicator  # noqa: E402
+from pydantic import ValidationError  # noqa: E402
+from sqlalchemy import create_engine, exists, select, text  # noqa: E402
+from starlette.requests import Request  # noqa: E402
+from starlette.routing import Router  # noqa: E402
+from starlette.testclient import TestClient  # noqa: E402
+
+from accounts.models import Friendship  # noqa: E402
+from accounts.schemas import UserCreate  # noqa: E402
+from rooms import services  # noqa: E402
+from rooms.consumers import CLOSE_BANNED, CLOSE_NOT_AUTHENTICATED, ChatConsumer  # noqa: E402
+from rooms.models import Message, Room, RoomBan, RoomInvitation, RoomMembership  # noqa: E402
+from rooms.routing import websocket_urlpatterns  # noqa: E402
+from rooms.schemas import RoomCreate, WSFriendRequestReceivedEvent  # noqa: E402
+from roomchat import settings  # noqa: E402
+from roomchat.asgi import application  # noqa: E402
+from roomchat.auth import (  # noqa: E402
+    HASH_SESSION_KEY, SESSION_KEY, create_user, get_session_auth_hash, make_password,
+)
+from roomchat.db import Base, db, db_scope, engine  # noqa: E402
+from roomchat.errors import format_pydantic_errors  # noqa: E402
+from roomchat.middleware import (  # noqa: E402
+    CSRF_COOKIE_NAME, SAFE_METHODS, PydanticValidationErrorMiddleware, json_validation_errors,
+)
+from roomchat.realtime import RedisChannelLayer, get_channel_layer  # noqa: E402
+from roomchat.sessions import SESSION_COOKIE_NAME, SessionStore  # noqa: E402
+
+TEST_DB_NAME = settings.DATABASES['default']['NAME']
+# Last line of defence: never let the per-test TRUNCATE near a non-test database.
+if not TEST_DB_NAME.startswith('test_') or engine.url.database != TEST_DB_NAME:
+    raise RuntimeError(f'Refusing to run: the engine points at {engine.url.database!r}, not a test_ DB.')
+
+HOST = '127.0.0.1'
+# Not 'localhost': Python's cookie jar files localhost cookies under 'localhost.local', so a
+# cookie set by hand (force_login) would sit next to the server's copy instead of replacing it.
+BASE_URL = f'http://{HOST}'
+
+
+# --- Fixtures ----------------------------------------------------------------------------
+# A fixture is a setUp that pytest hands to any test (or other fixture) naming it as an
+# argument. The code after `yield` is its tearDown. autouse=True runs it for every test.
+
+def _check_redis_is_idle():
+    """Stop the run if Redis is unreachable or a dev server is already listening on it.
+
+    Redis pub/sub ignores the DB number, so a running daphne on the same Redis would share
+    group names like asgi__group__user_1 with the tests and receive their broadcasts.
+    """
+    client = redis.Redis.from_url(settings.REDIS_URL)
+    try:
+        busy = client.pubsub_channels('asgi*')  # every channel/group our layer subscribes to
+    except redis.exceptions.ConnectionError as e:
+        pytest.exit(f'Redis is not reachable at {settings.REDIS_URL} ({e}). Start Redis first.', returncode=1)
+    finally:
+        client.close()
+    if busy:
+        pytest.exit(
+            f'Redis at {settings.REDIS_URL} already has {len(busy)} asgi* subscriptions: a dev '
+            'server seems to be using it. Stop it before running the tests.', returncode=1,
+        )
+
+
+@pytest.fixture(scope='session', autouse=True)
+def _test_database():
+    """Build test_<DB_NAME> once for the whole run with the real migrations; drop it at the end."""
+    _check_redis_is_idle()
+    # CREATE/DROP DATABASE can't run inside a transaction, hence AUTOCOMMIT, and they can't
+    # target the DB you're connected to, hence the 'postgres' maintenance DB.
+    admin_engine = create_engine(engine.url.set(database='postgres'), isolation_level='AUTOCOMMIT')
+    with admin_engine.connect() as conn:
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{TEST_DB_NAME}"'))  # left by a crashed run
+        conn.execute(text(f'CREATE DATABASE "{TEST_DB_NAME}"'))
+    alembic_command.upgrade(AlembicConfig(str(_BASE_DIR / 'alembic.ini')), 'head')
+
+    yield
+
+    engine.dispose()  # close the app engine's pooled connections, or the DROP would fail
+    with admin_engine.connect() as conn:
+        # No FORCE on purpose: a connection the suite leaked makes this fail loudly.
+        conn.execute(text(f'DROP DATABASE "{TEST_DB_NAME}"'))
+    admin_engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def _db_scope():
+    """Give each test its own `db` session, then empty every table after it.
+
+    Rolling back can't undo the test's writes: the HTTP app and the consumers commit over
+    their own connections. So the tables are emptied instead. TRUNCATE ... RESTART IDENTITY
+    CASCADE empties them all in one statement, resets id counters to 1, and follows FKs.
+    alembic_version isn't in Base.metadata, so it is never touched.
+    """
+    token = db_scope.set(object())  # a new key = a new `db` session (see roomchat/db.py)
+    try:
+        yield
+    finally:
+        # Close the test's session first: an open transaction holds table locks that
+        # would make the TRUNCATE below wait forever.
+        db.remove()
+        db_scope.reset(token)
+        tables = ', '.join(table.name for table in Base.metadata.sorted_tables)
+        with engine.begin() as conn:
+            conn.execute(text(f'TRUNCATE {tables} RESTART IDENTITY CASCADE'))
+
+
+class RoomChatClient(TestClient):
+    """TestClient that behaves like the SPA's api.js, plus Django's client.session and
+    client.force_login.
+
+    TestClient calls the app in-process (no server). Before every unsafe request (POST, ...)
+    it copies the current csrftoken cookie into X-CSRFToken and sends a same-site Origin.
+    The cookie is re-read every time because login hands out a new token.
+    """
+
+    def __init__(self):
+        super().__init__(application, base_url=BASE_URL)
+
+    def request(self, method, url, **kwargs):
+        """Send one request, adding the CSRF header and Origin to unsafe methods."""
+        if method.upper() not in SAFE_METHODS:
+            headers = dict(kwargs.pop('headers', None) or {})
+            headers.setdefault('Origin', BASE_URL)
+            token = self.cookies.get(CSRF_COOKIE_NAME)
+            if token:
+                headers.setdefault('X-CSRFToken', token)
+            kwargs['headers'] = headers
+        return super().request(method, url, **kwargs)
+
+    @property
+    def session(self):
+        """The server-side session behind the sessionid cookie (Django's client.session)."""
+        return SessionStore(self.cookies.get(SESSION_COOKIE_NAME))
+
+    def force_login(self, user):
+        """Log `user` in without a password: write a logged-in session row and use its cookie."""
+        session = SessionStore()
+        # The same two keys roomchat.auth.login() stores.
+        session[SESSION_KEY] = str(user.id)
+        session[HASH_SESSION_KEY] = get_session_auth_hash(user)
+        session.save()
+        # Same domain the server's own Set-Cookie lands on, so it replaces any earlier login.
+        self.cookies.set(SESSION_COOKIE_NAME, session.session_key, domain=HOST)
+
+
+@pytest.fixture
+def client():
+    """A RoomChatClient that already holds a csrftoken, like a browser after a cold load."""
+    client = RoomChatClient()
+    client.get('/')  # the SPA shell is @ensure_csrf_cookie, so this sets csrftoken
+    yield client
+    client.close()
+
+
+class WebsocketCommunicator(ApplicationCommunicator):
+    """Drives a WebSocket app in-process, with the method names of Channels' version.
+
+    ApplicationCommunicator (asgiref) runs an ASGI app as a task and lets the test push
+    messages in (send_input) and pull what the app sent out (receive_output). Like Channels,
+    the test may fill scope['user'] / scope['session'] after building it: the app only
+    starts on the first send or receive.
+    """
+
+    def __init__(self, application, path, headers=None):
+        parsed = urlsplit(path)
+        scope = {
+            'type': 'websocket',
+            'path': unquote(parsed.path),
+            'raw_path': parsed.path.encode(),
+            'query_string': parsed.query.encode(),
+            # AllowedHostsOriginValidator refuses sockets without an allowed Origin.
+            'headers': headers if headers is not None else [(b'origin', BASE_URL.encode())],
+            'subprotocols': [],
+        }
+        super().__init__(application, scope)
+
+    async def connect(self, timeout=1):
+        """Open the socket. Returns (True, subprotocol) if accepted, (False, code) if refused."""
+        await self.send_input({'type': 'websocket.connect'})
+        response = await self.receive_output(timeout)
+        if response['type'] == 'websocket.close':
+            return (False, response.get('code', 1000))
+        return (True, response.get('subprotocol', None))
+
+    async def send_json_to(self, data):
+        """Send one JSON text frame to the app, as the browser would."""
+        await self.send_input({'type': 'websocket.receive', 'text': json.dumps(data)})
+
+    async def receive_json_from(self, timeout=1):
+        """Wait for the next text frame from the app and decode its JSON."""
+        response = await self.receive_output(timeout)
+        assert response['type'] == 'websocket.send', response
+        return json.loads(response['text'])
+
+    async def disconnect(self, code=1000, timeout=1):
+        """Close from the browser side and wait for the app (and its disconnect()) to finish."""
+        await self.send_input({'type': 'websocket.disconnect', 'code': code})
+        await self.wait(timeout)
+
+
+def create(model, **fields):
+    """Insert one row and commit it: the stand-in for Django's Model.objects.create().
+
+    Committing matters: the app reads over its own DB connections, so it only sees committed rows.
+    """
+    obj = model(**fields)
+    db.add(obj)
+    db.commit()
+    return obj
+
+
+# --- Tests -------------------------------------------------------------------------------
 
 def _validation_error(model, **kwargs):
     try:
@@ -30,24 +251,24 @@ def _validation_error(model, **kwargs):
     raise AssertionError(f"{model} did not raise ValidationError for {kwargs}")
 
 
-class FormatPydanticErrorsTests(SimpleTestCase):
+class FormatPydanticErrorsTests:
     def test_missing_required_field(self):
         exc = _validation_error(UserCreate, username='', email='', password='')
         errors = format_pydantic_errors(exc)
-        self.assertIn('email', errors)
+        assert 'email' in errors
 
     def test_invalid_email_message_is_friendly(self):
         exc = _validation_error(UserCreate, username='alice', email='not-an-email', password='hunter22')
         errors = format_pydantic_errors(exc)
-        self.assertEqual(errors['email'], 'Enter a valid email address.')
+        assert errors['email'] == 'Enter a valid email address.'
 
     def test_custom_validator_message_strips_value_error_prefix(self):
         exc = _validation_error(RoomCreate, name='', description='', capacity='10', password='')
         errors = format_pydantic_errors(exc)
-        self.assertNotIn('Value error,', errors.get('name', ''))
+        assert 'Value error,' not in errors.get('name', '')
 
 
-class ConfirmPasswordTests(SimpleTestCase):
+class ConfirmPasswordTests:
     """UserCreate.confirm_password must report under its own field name.
 
     A @model_validator would land on '__all__', which the Django template
@@ -60,7 +281,7 @@ class ConfirmPasswordTests(SimpleTestCase):
             username='alice', email='alice@example.com',
             password='hunter22', confirm_password='hunter22',
         )
-        self.assertEqual(user.password, 'hunter22')
+        assert user.password == 'hunter22'
 
     def test_mismatch_reports_on_confirm_password(self):
         exc = _validation_error(
@@ -68,7 +289,7 @@ class ConfirmPasswordTests(SimpleTestCase):
             password='hunter22', confirm_password='hunter33',
         )
         errors = format_pydantic_errors(exc)
-        self.assertEqual(errors['confirm_password'], 'The two passwords do not match.')
+        assert errors['confirm_password'] == 'The two passwords do not match.'
 
     def test_blank_confirmation_is_reported(self):
         exc = _validation_error(
@@ -76,7 +297,7 @@ class ConfirmPasswordTests(SimpleTestCase):
             password='hunter22', confirm_password='',
         )
         errors = format_pydantic_errors(exc)
-        self.assertEqual(errors['confirm_password'], 'Please confirm your password.')
+        assert errors['confirm_password'] == 'Please confirm your password.'
 
     def test_bad_password_does_not_also_report_a_mismatch(self):
         # password is absent from info.data once it fails, so the match check is
@@ -86,49 +307,72 @@ class ConfirmPasswordTests(SimpleTestCase):
             password='short', confirm_password='short',
         )
         errors = format_pydantic_errors(exc)
-        self.assertEqual(errors['password'], 'Password must be at least 8 characters long.')
-        self.assertNotIn('confirm_password', errors)
+        assert errors['password'] == 'Password must be at least 8 characters long.'
+        assert 'confirm_password' not in errors
 
 
-class PydanticValidationErrorMiddlewareTests(SimpleTestCase):
+class PydanticValidationErrorMiddlewareTests:
+    """The middleware is pure ASGI now, so it is driven as one: it wraps a tiny fake inner
+    app that raises, and the test collects every message it sends back. "Ignores" means
+    the exception passes straight through (Django's process_exception returned None)."""
+
+    @pytest.fixture(autouse=True)
     def setUp(self):
-        self.get_response = Mock(return_value='response')
-        self.middleware = PydanticValidationErrorMiddleware(self.get_response)
+        """Build the ValidationError the tests raise."""
         self.exc = _validation_error(UserCreate, username='', email='', password='')
 
-    def test_ignores_non_validation_errors(self):
-        request = Mock(_json_validation_errors=True)
-        self.assertIsNone(self.middleware.process_exception(request, ValueError('boom')))
+    async def _run(self, exc, opted_in):
+        """Run the middleware around an inner app that raises `exc`; return what it sent."""
+        async def inner_app(scope, receive, send):
+            # Stands in for the routed view that raised.
+            raise exc
 
-    def test_ignores_validation_error_when_not_opted_in(self):
-        request = Mock(spec=[])
-        self.assertIsNone(self.middleware.process_exception(request, self.exc))
+        async def receive():
+            return {'type': 'http.request', 'body': b'', 'more_body': False}
 
-    def test_returns_json_400_when_opted_in(self):
-        request = Mock(_json_validation_errors=True)
-        response = self.middleware.process_exception(request, self.exc)
-        self.assertIsNotNone(response)
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(b'"errors"', response.content)
+        sent = []
+
+        async def send(message):
+            sent.append(message)
+
+        # @json_validation_errors puts this flag in request.state, i.e. scope['state'].
+        state = {'_json_validation_errors': True} if opted_in else {}
+        scope = {'type': 'http', 'method': 'POST', 'path': '/', 'headers': [], 'state': state}
+        await PydanticValidationErrorMiddleware(inner_app)(scope, receive, send)
+        return sent
+
+    async def test_ignores_non_validation_errors(self):
+        with pytest.raises(ValueError):
+            await self._run(ValueError('boom'), opted_in=True)
+
+    async def test_ignores_validation_error_when_not_opted_in(self):
+        with pytest.raises(ValidationError):
+            await self._run(self.exc, opted_in=False)
+
+    async def test_returns_json_400_when_opted_in(self):
+        sent = await self._run(self.exc, opted_in=True)
+        assert sent  # a response was sent
+        assert sent[0]['status'] == 400
+        assert b'"errors"' in sent[1]['body']
 
 
-class JsonValidationErrorsDecoratorTests(SimpleTestCase):
+class JsonValidationErrorsDecoratorTests:
     def test_sets_flag_on_request_before_calling_view(self):
         seen = {}
 
         def view(request):
-            seen['flag'] = getattr(request, '_json_validation_errors', False)
+            seen['flag'] = getattr(request.state, '_json_validation_errors', False)
             return 'ok'
 
         wrapped = json_validation_errors(view)
-        request = Mock(spec=[])
+        request = Request({'type': 'http'})  # a bare request, no flag set yet
         result = wrapped(request)
 
-        self.assertTrue(seen['flag'])
-        self.assertEqual(result, 'ok')
+        assert seen['flag']
+        assert result == 'ok'
 
 
-class RedisChannelLayerTests(SimpleTestCase):
+class RedisChannelLayerTests:
     """The channel layer must carry broadcasts between *independent* layer
     instances.
 
@@ -149,23 +393,20 @@ class RedisChannelLayerTests(SimpleTestCase):
     SILENCE_TIMEOUT = 0.5
 
     def _layer(self):
-        return RedisPubSubChannelLayer(**settings.CHANNEL_LAYERS['default']['CONFIG'])
+        return RedisChannelLayer(**settings.CHANNEL_LAYERS['default']['CONFIG'])
 
     def test_configured_backend_is_redis_pubsub(self):
-        self.assertEqual(
-            settings.CHANNEL_LAYERS['default']['BACKEND'],
-            'channels_redis.pubsub.RedisPubSubChannelLayer',
-        )
-        self.assertIsInstance(get_channel_layer(), RedisPubSubChannelLayer)
+        assert settings.CHANNEL_LAYERS['default']['BACKEND'] == 'roomchat.realtime.RedisChannelLayer'
+        assert isinstance(get_channel_layer(), RedisChannelLayer)
 
     def test_config_omits_options_the_pubsub_layer_ignores(self):
-        # capacity/expiry/group_expiry are core-layer options. The pubsub layer
-        # silently drops them, so leaving them in CONFIG would read as working
+        # capacity/expiry/group_expiry are core-layer options. A pub/sub layer has no
+        # backpressure, so leaving them in CONFIG would read as working
         # backpressure that does not exist.
         config = settings.CHANNEL_LAYERS['default']['CONFIG']
-        self.assertEqual(config['hosts'], [settings.REDIS_URL])
+        assert config['hosts'] == [settings.REDIS_URL]
         for ignored in ('capacity', 'expiry', 'group_expiry'):
-            self.assertNotIn(ignored, config)
+            assert ignored not in config
 
     async def test_group_send_crosses_layer_instances(self):
         """room_<code> broadcasts — messages, presence, moderation."""
@@ -178,7 +419,7 @@ class RedisChannelLayerTests(SimpleTestCase):
             await sender.group_send('room_ABC123', event)
 
             got = await asyncio.wait_for(receiver.receive(channel), self.TIMEOUT)
-            self.assertEqual(got, event)
+            assert got == event
         finally:
             await sender.flush()
             await receiver.flush()
@@ -195,14 +436,8 @@ class RedisChannelLayerTests(SimpleTestCase):
             event = {'type': 'user_joined', 'username': 'alice', 'user_id': 1}
             await sender.group_send('room_ABC123', event)
 
-            self.assertEqual(
-                await asyncio.wait_for(receiver_a.receive(channel_a), self.TIMEOUT),
-                event,
-            )
-            self.assertEqual(
-                await asyncio.wait_for(receiver_b.receive(channel_b), self.TIMEOUT),
-                event,
-            )
+            assert await asyncio.wait_for(receiver_a.receive(channel_a), self.TIMEOUT) == event
+            assert await asyncio.wait_for(receiver_b.receive(channel_b), self.TIMEOUT) == event
         finally:
             await sender.flush()
             await receiver_a.flush()
@@ -219,7 +454,7 @@ class RedisChannelLayerTests(SimpleTestCase):
             await sender.send(channel, event)
 
             got = await asyncio.wait_for(receiver.receive(channel), self.TIMEOUT)
-            self.assertEqual(got, event)
+            assert got == event
         finally:
             await sender.flush()
             await receiver.flush()
@@ -235,7 +470,7 @@ class RedisChannelLayerTests(SimpleTestCase):
 
             await sender.group_send('room_ABC123', {'type': 'user_left'})
 
-            with self.assertRaises(asyncio.TimeoutError):
+            with pytest.raises(asyncio.TimeoutError):
                 await asyncio.wait_for(receiver.receive(channel), self.SILENCE_TIMEOUT)
         finally:
             await sender.flush()
@@ -249,7 +484,7 @@ class RedisChannelLayerTests(SimpleTestCase):
 
             await sender.group_send('room_XYZ789', {'type': 'message_created'})
 
-            with self.assertRaises(asyncio.TimeoutError):
+            with pytest.raises(asyncio.TimeoutError):
                 await asyncio.wait_for(receiver.receive(channel), self.SILENCE_TIMEOUT)
         finally:
             await sender.flush()
@@ -269,15 +504,15 @@ class RedisChannelLayerTests(SimpleTestCase):
             await sender.group_send('user_1', event)
 
             got = await asyncio.wait_for(receiver.receive(channel), self.TIMEOUT)
-            self.assertEqual(got, event)
+            assert got == event
             # The type literal is what group_send dispatches on.
-            self.assertEqual(got['type'], 'friend_request_received')
+            assert got['type'] == 'friend_request_received'
         finally:
             await sender.flush()
             await receiver.flush()
 
 
-class NotificationConsumerCrossProcessTests(TransactionTestCase):
+class NotificationConsumerCrossProcessTests:
     """End-to-end proof: a live NotificationConsumer receives an event sent from
     a channel layer instance it does not share.
 
@@ -287,22 +522,24 @@ class NotificationConsumerCrossProcessTests(TransactionTestCase):
 
     TIMEOUT = 5
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
-        self.user = User.objects.create_user('alice', password='x')
+        """Create the user whose notification socket is opened."""
+        self.user = create_user('alice', password='x')
 
     async def test_friend_request_reaches_socket_from_another_layer_instance(self):
         communicator = WebsocketCommunicator(
-            URLRouter(websocket_urlpatterns), '/ws/notifications/',
+            Router(websocket_urlpatterns), '/ws/notifications/',
         )
         communicator.scope['user'] = self.user
         communicator.scope['session'] = {}
 
         connected, _ = await communicator.connect()
-        self.assertTrue(connected)
+        assert connected
 
         # A separate layer object: the consumer above subscribed through
         # get_channel_layer(), this publishes through its own Redis connection.
-        sender = RedisPubSubChannelLayer(**settings.CHANNEL_LAYERS['default']['CONFIG'])
+        sender = RedisChannelLayer(**settings.CHANNEL_LAYERS['default']['CONFIG'])
         try:
             event = WSFriendRequestReceivedEvent(
                 friendship_id=1, sender_username='bob', sender_id=self.user.id + 1,
@@ -312,31 +549,31 @@ class NotificationConsumerCrossProcessTests(TransactionTestCase):
             got = await asyncio.wait_for(
                 communicator.receive_json_from(self.TIMEOUT), self.TIMEOUT,
             )
-            self.assertEqual(got, event)
+            assert got == event
         finally:
             await sender.flush()
             await communicator.disconnect()
 
 
-class ChatConsumerPasswordGateTests(TransactionTestCase):
+class ChatConsumerPasswordGateTests:
     """The WS gate is a plain session check: owners bypass, everyone else needs
     session['room_grant'] to hold this room's code.
 
     room_detail_api is the only thing that mints a grant — including from an accepted
     invitation — so an invitation alone does not open a socket."""
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
-        self.owner = User.objects.create_user('owner', password='x')
-        self.other = User.objects.create_user('other', password='x')
+        """Create the owner, another user, and a password-protected room."""
+        self.owner = create_user('owner', password='x')
+        self.other = create_user('other', password='x')
         # Non-empty password marks the room protected; the gate only checks
         # truthiness, so the value need not be a real hash.
-        self.room = Room.objects.create(
-            name='Secret', owner=self.owner, password='hashed'
-        )
+        self.room = create(Room, name='Secret', owner=self.owner, password='hashed')
 
     def _communicator(self, user, session=None):
         communicator = WebsocketCommunicator(
-            URLRouter(websocket_urlpatterns),
+            Router(websocket_urlpatterns),
             f'/ws/chat/{self.room.room_code}/',
         )
         communicator.scope['user'] = user
@@ -346,21 +583,21 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
     async def _assert_rejected(self, communicator, code=CLOSE_NOT_AUTHENTICATED):
         connected, _ = await communicator.connect()
         # reject() accepts before closing, so connected is True either way.
-        self.assertTrue(connected)
+        assert connected
         error = await communicator.receive_json_from()
-        self.assertEqual(error['type'], 'error')
+        assert error['type'] == 'error'
         close = await communicator.receive_output()
-        self.assertEqual(close['type'], 'websocket.close')
-        self.assertEqual(close['code'], code)
+        assert close['type'] == 'websocket.close'
+        assert close['code'] == code
         await communicator.disconnect()
 
     async def _assert_admitted(self, communicator):
         connected, _ = await communicator.connect()
-        self.assertTrue(connected)
+        assert connected
         # First frame after a successful join is a real event, not the error
         # frame that precedes a rejection close.
         first = await communicator.receive_json_from()
-        self.assertNotEqual(first['type'], 'error')
+        assert first['type'] != 'error'
         await communicator.disconnect()
 
     async def test_user_without_grant_is_rejected(self):
@@ -371,8 +608,9 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
 
     async def test_accepted_invite_alone_is_rejected(self):
         # The invitation is consumed by room_detail_api, not read here.
-        await RoomInvitation.objects.acreate(
-            room=self.room, sender=self.owner, receiver=self.other,
+        # (A plain sync insert: nothing else is running on the loop at this point.)
+        create(
+            RoomInvitation, room=self.room, sender=self.owner, receiver=self.other,
             status='accepted',
         )
         await self._assert_rejected(self._communicator(self.other))
@@ -388,19 +626,21 @@ class ChatConsumerPasswordGateTests(TransactionTestCase):
     async def test_banned_user_is_refused_despite_a_valid_grant(self):
         # A ban is not session state, so the grant that admitted them before the
         # kick no longer helps — and the close code says why.
-        await RoomBan.objects.acreate(room=self.room, user=self.other, banned_by=self.owner)
+        create(RoomBan, room=self.room, user=self.other, banned_by=self.owner)
         session = {'room_grant': self.room.room_code}
         await self._assert_rejected(self._communicator(self.other, session), CLOSE_BANNED)
 
 
-class RoomBanTests(TransactionTestCase):
+class RoomBanTests:
     """ban_member is the only writer of RoomBan, and it refuses anyone who is
     not currently a member — see the helper's docstring."""
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
-        self.owner = User.objects.create_user('owner', password='x')
-        self.other = User.objects.create_user('other', password='x')
-        self.room = Room.objects.create(name='Secret', owner=self.owner, password='hashed')
+        """Create the owner, another user, and a protected room."""
+        self.owner = create_user('owner', password='x')
+        self.other = create_user('other', password='x')
+        self.room = create(Room, name='Secret', owner=self.owner, password='hashed')
 
     def _consumer(self, user):
         """A consumer instance just complete enough to drive ban_member()."""
@@ -409,45 +649,54 @@ class RoomBanTests(TransactionTestCase):
         consumer.user = user
         return consumer
 
+    # The DB checks below are plain sync calls (Django used aexists/acreate/aget): the
+    # consumer is idle between awaits, so briefly blocking the loop is harmless here.
+
     async def test_ban_member_refuses_a_non_member(self):
         # Without the membership requirement a crafted kick_user frame could
         # lock out a user who was never in the room.
-        self.assertFalse(await self._consumer(self.owner).ban_member(self.other.id))
-        self.assertFalse(await RoomBan.objects.filter(room=self.room).aexists())
+        assert not await self._consumer(self.owner).ban_member(self.other.id)
+        assert not db.scalar(select(exists().where(RoomBan.room == self.room)))
 
     async def test_owner_cannot_be_banned(self):
-        await RoomMembership.objects.acreate(room=self.room, user=self.owner)
-        self.assertFalse(await self._consumer(self.owner).ban_member(self.owner.id))
-        self.assertFalse(await RoomBan.objects.filter(room=self.room).aexists())
-        self.assertTrue(
-            await RoomMembership.objects.filter(room=self.room, user=self.owner).aexists()
-        )
+        # FK ids, not room=self.room: setting the relationship would also mark self.room's
+        # dynamic `memberships` collection as changed, which ban_member's merge can't copy.
+        # Django's acreate never touched self.room either.
+        create(RoomMembership, room_id=self.room.id, user_id=self.owner.id)
+        assert not await self._consumer(self.owner).ban_member(self.owner.id)
+        assert not db.scalar(select(exists().where(RoomBan.room == self.room)))
+        assert db.scalar(select(exists().where(
+            RoomMembership.room == self.room, RoomMembership.user == self.owner,
+        )))
 
     async def test_ban_member_removes_presence_and_records_the_issuer(self):
-        await RoomMembership.objects.acreate(room=self.room, user=self.other)
-        self.assertTrue(await self._consumer(self.owner).ban_member(self.other.id))
-        ban = await RoomBan.objects.aget(room=self.room, user=self.other)
-        self.assertEqual(ban.banned_by_id, self.owner.id)
-        self.assertFalse(
-            await RoomMembership.objects.filter(room=self.room, user=self.other).aexists()
-        )
+        create(RoomMembership, room_id=self.room.id, user_id=self.other.id)  # FK ids: see above
+        assert await self._consumer(self.owner).ban_member(self.other.id)
+        ban = db.scalars(select(RoomBan).where(RoomBan.room == self.room, RoomBan.user == self.other)).one()
+        assert ban.banned_by_id == self.owner.id
+        assert not db.scalar(select(exists().where(
+            RoomMembership.room == self.room, RoomMembership.user == self.other,
+        )))
 
 
-class RoomBanHTTPGateTests(TestCase):
+class RoomBanHTTPGateTests:
     """room_detail_api is the gate that matters: the WS check alone would still let a
     banned user load the room and receive the message history."""
 
     PASSWORD = 'hunter22'
 
-    def setUp(self):
-        self.owner = User.objects.create_user('owner', password='x')
-        self.other = User.objects.create_user('other', password='x')
-        self.room = Room.objects.create(
-            name='Secret', owner=self.owner, password=make_password(self.PASSWORD),
+    @pytest.fixture(autouse=True)
+    def setUp(self, client):
+        """A protected room with one secret message, and `other` banned and logged in."""
+        self.client = client
+        self.owner = create_user('owner', password='x')
+        self.other = create_user('other', password='x')
+        self.room = create(
+            Room, name='Secret', owner=self.owner, password=make_password(self.PASSWORD),
         )
         self.secret_line = 'topsecretchatter'
-        Message.objects.create(room=self.room, sender=self.owner, content=self.secret_line)
-        RoomBan.objects.create(room=self.room, user=self.other, banned_by=self.owner)
+        create(Message, room=self.room, sender=self.owner, content=self.secret_line)
+        create(RoomBan, room=self.room, user=self.other, banned_by=self.owner)
         self.client.force_login(self.other)
 
     def _url(self):
@@ -455,103 +704,107 @@ class RoomBanHTTPGateTests(TestCase):
 
     def test_banned_user_is_refused_and_leaks_no_history(self):
         response = self.client.get(self._url())
-        self.assertEqual(response.status_code, 403)
-        self.assertNotContains(response, self.secret_line, status_code=403)
-        self.assertNotIn('messages', response.json())
-        self.assertNotIn('room_grant', self.client.session)
+        assert response.status_code == 403
+        assert self.secret_line not in response.text
+        assert 'messages' not in response.json()
+        assert 'room_grant' not in self.client.session
 
     def test_accepted_invitation_does_not_override_a_ban(self):
         # Asserts the gate ordering: the ban check returns before the invitation
         # branch, so the invitation is neither consumed nor able to mint a grant.
-        RoomInvitation.objects.create(
-            room=self.room, sender=self.owner, receiver=self.other, status='accepted',
+        create(
+            RoomInvitation, room=self.room, sender=self.owner, receiver=self.other, status='accepted',
         )
         response = self.client.get(self._url())
-        self.assertEqual(response.status_code, 403)
-        self.assertNotContains(response, self.secret_line, status_code=403)
-        self.assertNotIn('room_grant', self.client.session)
-        self.assertTrue(
-            RoomInvitation.objects.filter(room=self.room, receiver=self.other).exists()
-        )
+        assert response.status_code == 403
+        assert self.secret_line not in response.text
+        assert 'room_grant' not in self.client.session
+        assert db.scalar(select(exists().where(
+            RoomInvitation.room == self.room, RoomInvitation.receiver == self.other,
+        )))
 
     def test_correct_password_does_not_mint_a_grant_for_a_banned_user(self):
-        response = self.client.post('/api/rooms/join/', {
+        response = self.client.post('/api/rooms/join/', data={
             'room_code': self.room.room_code, 'password': self.PASSWORD,
         })
-        self.assertEqual(response.status_code, 403)
-        self.assertNotIn('room_grant', self.client.session)
+        assert response.status_code == 403
+        assert 'room_grant' not in self.client.session
 
     def test_invitation_to_a_banned_user_is_refused_with_a_reason(self):
-        Friendship.objects.create(sender=self.owner, receiver=self.other, status='accepted')
+        create(Friendship, sender=self.owner, receiver=self.other, status='accepted')
         result = services.create_room_invitation(self.owner, self.room, self.other.id)
-        self.assertEqual(result['error'], 'That user was removed from this room.')
-        self.assertFalse(RoomInvitation.objects.filter(room=self.room).exists())
+        assert result['error'] == 'That user was removed from this room.'
+        assert not db.scalar(select(exists().where(RoomInvitation.room == self.room)))
 
     def test_deleting_the_room_cascades_the_ban(self):
         # The room's lifetime is the ban's lifetime — that is why there is no
         # expires_at. A recycled room code lands on a new Room row.
-        self.room.delete()
-        self.assertFalse(RoomBan.objects.filter(user=self.other).exists())
+        db.delete(self.room)
+        db.commit()
+        assert not db.scalar(select(exists().where(RoomBan.user == self.other)))
 
 
-class RoomDetailGateTests(TestCase):
+class RoomDetailGateTests:
     """room_detail_api is the HTTP gate; it and join_room are the only two places a
     grant is minted."""
 
     PASSWORD = 'hunter22'
 
-    def setUp(self):
-        self.owner = User.objects.create_user('owner', password='x')
-        self.other = User.objects.create_user('other', password='x')
-        self.room = Room.objects.create(
-            name='Secret', owner=self.owner, password=make_password(self.PASSWORD),
+    @pytest.fixture(autouse=True)
+    def setUp(self, client):
+        """A protected room with one secret message, an open room, and `other` logged in."""
+        self.client = client
+        self.owner = create_user('owner', password='x')
+        self.other = create_user('other', password='x')
+        self.room = create(
+            Room, name='Secret', owner=self.owner, password=make_password(self.PASSWORD),
         )
-        self.open_room = Room.objects.create(name='Open', owner=self.owner)
+        self.open_room = create(Room, name='Open', owner=self.owner)
         # Distinctive enough that finding it in a response body means the
         # history query ran for someone who had not unlocked the room.
         self.secret_line = 'topsecretchatter'
-        Message.objects.create(room=self.room, sender=self.owner, content=self.secret_line)
+        create(Message, room=self.room, sender=self.owner, content=self.secret_line)
         self.client.force_login(self.other)
 
     def _url(self, room):
         return f'/api/rooms/{room.room_code}/'
 
     def _contents(self, response):
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         return [m['content'] for m in response.json()['messages']]
 
     def test_locked_room_without_grant_is_refused_and_leaks_no_history(self):
         response = self.client.get(self._url(self.room))
-        self.assertEqual(response.status_code, 403)
-        self.assertNotContains(response, self.secret_line, status_code=403)
-        self.assertNotIn('messages', response.json())
-        self.assertNotIn('room_grant', self.client.session)
+        assert response.status_code == 403
+        assert self.secret_line not in response.text
+        assert 'messages' not in response.json()
+        assert 'room_grant' not in self.client.session
 
     def test_correct_password_mints_grant_and_admits(self):
-        response = self.client.post('/api/rooms/join/', {
+        response = self.client.post('/api/rooms/join/', data={
             'room_code': self.room.room_code, 'password': self.PASSWORD,
         })
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['room_code'], self.room.room_code)
-        self.assertEqual(self.client.session['room_grant'], self.room.room_code)
-        self.assertIn(self.secret_line, self._contents(self.client.get(self._url(self.room))))
+        assert response.status_code == 200
+        assert response.json()['room_code'] == self.room.room_code
+        assert self.client.session['room_grant'] == self.room.room_code
+        assert self.secret_line in self._contents(self.client.get(self._url(self.room)))
 
     def test_bare_code_with_empty_password_is_rejected(self):
-        response = self.client.post('/api/rooms/join/', {
+        response = self.client.post('/api/rooms/join/', data={
             'room_code': self.room.room_code, 'password': '',
         })
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('Incorrect room password.', response.json()['errors'].values())
-        self.assertNotIn('room_grant', self.client.session)
+        assert response.status_code == 400
+        assert 'Incorrect room password.' in response.json()['errors'].values()
+        assert 'room_grant' not in self.client.session
 
     def test_accepted_invitation_admits_exactly_once(self):
-        RoomInvitation.objects.create(
-            room=self.room, sender=self.owner, receiver=self.other, status='accepted',
+        create(
+            RoomInvitation, room=self.room, sender=self.owner, receiver=self.other, status='accepted',
         )
-        self.assertIn(self.secret_line, self._contents(self.client.get(self._url(self.room))))
-        self.assertFalse(
-            RoomInvitation.objects.filter(room=self.room, receiver=self.other).exists()
-        )
+        assert self.secret_line in self._contents(self.client.get(self._url(self.room)))
+        assert not db.scalar(select(exists().where(
+            RoomInvitation.room == self.room, RoomInvitation.receiver == self.other,
+        )))
 
         # Stand in for the socket dropping, which is what revokes the grant.
         session = self.client.session
@@ -559,131 +812,143 @@ class RoomDetailGateTests(TestCase):
         session.save()
 
         again = self.client.get(self._url(self.room))
-        self.assertEqual(again.status_code, 403)
-        self.assertNotContains(again, self.secret_line, status_code=403)
+        assert again.status_code == 403
+        assert self.secret_line not in again.text
 
     def test_owner_needs_no_grant(self):
         self.client.force_login(self.owner)
-        self.assertIn(self.secret_line, self._contents(self.client.get(self._url(self.room))))
-        self.assertNotIn('room_grant', self.client.session)
+        assert self.secret_line in self._contents(self.client.get(self._url(self.room)))
+        assert 'room_grant' not in self.client.session
 
     def test_open_room_is_reachable_directly(self):
-        self.assertEqual(self.client.get(self._url(self.open_room)).status_code, 200)
+        assert self.client.get(self._url(self.open_room)).status_code == 200
 
     def test_unknown_room_is_404_json(self):
         response = self.client.get('/api/rooms/ZZZZZZ/')
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json()['error'], 'This room no longer exists.')
+        assert response.status_code == 404
+        assert response.json()['error'] == 'This room no longer exists.'
 
     def test_room_payload_never_carries_the_password_hash(self):
         self.client.force_login(self.owner)
         room = self.client.get(self._url(self.room)).json()['room']
-        self.assertTrue(room['is_protected'])
-        self.assertNotIn('password', room)
+        assert room['is_protected']
+        assert 'password' not in room
 
     def test_history_carries_the_reply_preview_shape_the_socket_uses(self):
-        parent = Message.objects.get(room=self.room, content=self.secret_line)
-        Message.objects.create(
-            room=self.room, sender=self.owner, content='a reply', reply_to=parent,
+        parent = db.scalars(
+            select(Message).where(Message.room == self.room, Message.content == self.secret_line)
+        ).one()
+        create(
+            Message, room=self.room, sender=self.owner, content='a reply', reply_to=parent,
         )
         self.client.force_login(self.owner)
         messages = self.client.get(self._url(self.room)).json()['messages']
         preview = messages[-1]['reply_to']
         # The same three keys ChatConsumer.get_message_preview emits, so the frontend
         # renders history and live messages through one code path.
-        self.assertEqual(set(preview), {'message_id', 'sender_username', 'content'})
-        self.assertEqual(preview['sender_username'], self.owner.username)
+        assert set(preview) == {'message_id', 'sender_username', 'content'}
+        assert preview['sender_username'] == self.owner.username
 
 
-class ApiAuthTests(TestCase):
+class ApiAuthTests:
     """The SPA cannot follow a redirect to an HTML login page, so an unauthenticated
     API call must answer 401 JSON."""
 
+    @pytest.fixture(autouse=True)
+    def setUp(self, client):
+        """Hand each test the CSRF-primed client."""
+        self.client = client
+
     def test_unauthenticated_api_call_is_401_json(self):
         response = self.client.get('/api/dashboard/')
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()['error'], 'Not authenticated.')
+        assert response.status_code == 401
+        assert response.json()['error'] == 'Not authenticated.'
 
     def test_register_signs_the_user_in(self):
-        response = self.client.post('/api/auth/register/', {
+        response = self.client.post('/api/auth/register/', data={
             'username': 'newbie', 'email': 'newbie@example.com',
             'password': 'hunter22', 'confirm_password': 'hunter22',
         })
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['user']['username'], 'newbie')
-        self.assertEqual(self.client.get('/api/dashboard/').status_code, 200)
+        assert response.status_code == 200
+        assert response.json()['user']['username'] == 'newbie'
+        assert self.client.get('/api/dashboard/').status_code == 200
 
     def test_register_reports_field_errors(self):
-        response = self.client.post('/api/auth/register/', {
+        response = self.client.post('/api/auth/register/', data={
             'username': 'newbie', 'email': 'newbie@example.com',
             'password': 'hunter22', 'confirm_password': 'mismatch',
         })
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('confirm_password', response.json()['errors'])
+        assert response.status_code == 400
+        assert 'confirm_password' in response.json()['errors']
 
     def test_duplicate_username_is_a_field_error(self):
-        User.objects.create_user('taken', password='hunter22')
-        response = self.client.post('/api/auth/register/', {
+        create_user('taken', password='hunter22')
+        response = self.client.post('/api/auth/register/', data={
             'username': 'taken', 'email': 'taken@example.com',
             'password': 'hunter22', 'confirm_password': 'hunter22',
         })
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json()['errors']['username'],
-            'A user with that username already exists.',
-        )
+        assert response.status_code == 400
+        assert response.json()['errors']['username'] == 'A user with that username already exists.'
 
     def test_login_and_logout_round_trip(self):
-        User.objects.create_user('someone', password='hunter22')
-        login_res = self.client.post('/api/auth/login/', {
+        create_user('someone', password='hunter22')
+        login_res = self.client.post('/api/auth/login/', data={
             'username': 'someone', 'password': 'hunter22',
         })
-        self.assertEqual(login_res.status_code, 200)
-        self.assertEqual(self.client.get('/api/auth/me/').status_code, 200)
+        assert login_res.status_code == 200
+        assert self.client.get('/api/auth/me/').status_code == 200
 
-        self.assertEqual(self.client.post('/api/auth/logout/').status_code, 200)
-        self.assertEqual(self.client.get('/api/auth/me/').status_code, 401)
+        assert self.client.post('/api/auth/logout/').status_code == 200
+        assert self.client.get('/api/auth/me/').status_code == 401
 
     def test_bad_credentials_do_not_say_which_half_was_wrong(self):
-        User.objects.create_user('someone', password='hunter22')
-        response = self.client.post('/api/auth/login/', {
+        create_user('someone', password='hunter22')
+        response = self.client.post('/api/auth/login/', data={
             'username': 'someone', 'password': 'wrong',
         })
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Invalid username or password.')
-        self.assertNotIn('errors', response.json())
+        assert response.status_code == 400
+        assert response.json()['error'] == 'Invalid username or password.'
+        assert 'errors' not in response.json()
 
     def test_logout_rejects_get(self):
         # A GET logout is reachable by a link prefetch or a stray <a href>.
-        self.assertEqual(self.client.get('/api/auth/logout/').status_code, 405)
+        assert self.client.get('/api/auth/logout/').status_code == 405
 
 
-class SpaShellTests(TestCase):
+class SpaShellTests:
     """Client-side routes must survive a hard refresh, and the shell has to hand the
     SPA a CSRF cookie and the signed-in user."""
 
+    @pytest.fixture(autouse=True)
+    def setUp(self, client):
+        """Hand each test the CSRF-primed client."""
+        self.client = client
+
     def test_client_routes_serve_the_shell(self):
+        # One test looping over the paths (Django's subTest), so the test count is unchanged.
         for path in ('/', '/login', '/dashboard', '/room/ABC123'):
-            with self.subTest(path=path):
-                response = self.client.get(path)
-                self.assertEqual(response.status_code, 200)
-                self.assertContains(response, 'id="root"')
+            response = self.client.get(path)
+            assert response.status_code == 200, path
+            assert 'id="root"' in response.text, path
 
     def test_shell_sets_the_csrf_cookie(self):
         response = self.client.get('/login')
-        self.assertIn('csrftoken', response.cookies)
+        assert 'csrftoken' in response.cookies
 
     def test_shell_bootstraps_the_signed_in_user(self):
-        user = User.objects.create_user('someone', password='x', email='s@example.com')
+        user = create_user('someone', password='x', email='s@example.com')
         self.client.force_login(user)
         response = self.client.get('/dashboard')
-        self.assertContains(response, 'someone')
-        self.assertContains(response, 'roomchat-bootstrap')
+        assert response.status_code == 200
+        assert 'someone' in response.text
+        assert 'roomchat-bootstrap' in response.text
 
     def test_shell_bootstraps_null_for_anonymous(self):
-        self.assertContains(self.client.get('/dashboard'), '"user": null')
+        response = self.client.get('/dashboard')
+        assert response.status_code == 200
+        assert '"user": null' in response.text
 
     def test_api_paths_never_fall_through_to_the_shell(self):
         response = self.client.get('/api/nope/')
-        self.assertEqual(response.status_code, 404)
-        self.assertNotContains(response, 'id="root"', status_code=404)
+        assert response.status_code == 404
+        assert 'id="root"' not in response.text

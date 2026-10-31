@@ -1,0 +1,10 @@
+-r requirements.txt
+h11==0.16.0
+httpcore2==2.16.0
+httpx2==2.16.0
+iniconfig==2.3.1
+pluggy==1.7.0
+Pygments==2.21.0
+pytest==9.2.0
+pytest-asyncio==1.4.1
+truststore==0.10.5
