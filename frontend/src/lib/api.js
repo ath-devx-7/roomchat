@@ -1,4 +1,4 @@
-// Thin fetch wrappers over the Django JSON API.
+// Thin fetch wrappers over the backend's JSON API (FastAPI).
 //
 // The backend signals failure in two shapes and both reach the user:
 //   {"error": "..."}                     — a single message (flat failures, 4xx)
@@ -28,7 +28,7 @@ async function parse(res) {
   try {
     data = JSON.parse(text);
   } catch {
-    // Django's HTML debug page, a proxy error page, anything non-JSON. Never show
+    // The DEBUG traceback page, a proxy error page, anything non-JSON. Never show
     // markup to the user.
     throw new ApiError(`Server error (${res.status}). Please try again.`, {
       status: res.status,
@@ -54,8 +54,8 @@ export async function getJSON(url) {
 }
 
 /**
- * POST as form-urlencoded — the Django views read request.POST, so this keeps them
- * free of manual json.loads and keeps CSRF handling on Django's normal path.
+ * POST as form-urlencoded — the views read the form body (roomchat/errors.py form_data),
+ * so this keeps them free of manual json.loads; CSRF comes from the X-CSRFToken header.
  */
 export async function postJSON(url, fields) {
   const headers = { "X-CSRFToken": getCookie("csrftoken") || "", Accept: "application/json" };

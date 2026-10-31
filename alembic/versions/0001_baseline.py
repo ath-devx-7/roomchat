@@ -1093,9 +1093,12 @@ def upgrade():
     # adopts the baseline on its first `upgrade head` instead of re-creating it.
     if sa.inspect(bind).has_table('rooms_room'):
         return
-    # \restrict / \unrestrict are psql meta-commands, not SQL.
+    # \restrict / \unrestrict are psql meta-commands, not SQL. `SET transaction_timeout`
+    # only exists on PostgreSQL 17+ (pg_dump 18 wrote it), and PostgreSQL 14-16 reject it.
+    # It only switches off a timeout that is off by default, so skipping it changes nothing.
     sql = '\n'.join(
-        line for line in SCHEMA_SQL.splitlines() if not line.startswith(('\\restrict', '\\unrestrict'))
+        line for line in SCHEMA_SQL.splitlines()
+        if not line.startswith(('\\restrict', '\\unrestrict', 'SET transaction_timeout'))
     )
     search_path = bind.exec_driver_sql('SHOW search_path').scalar()
     # exec_driver_sql, not text(): the dump's `::` casts must not be parsed as bind params.

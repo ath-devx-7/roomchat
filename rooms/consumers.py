@@ -420,8 +420,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def revoke_room_grant(self):
         """Drop this room's session grant so re-entry needs the password again.
 
-        Channels' SessionMiddleware only persists scope['session'] when a
-        websocket.accept/close is sent, so disconnect() has to save explicitly.
+        On WebSockets SessionMiddleware (roomchat/middleware.py) only loads
+        scope['session'] and never saves it, so disconnect() has to save explicitly.
         Load a fresh store rather than the connect-time snapshot, so this does
         not clobber HTTP-side session changes made during the connection.
         """

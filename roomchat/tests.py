@@ -271,8 +271,8 @@ class FormatPydanticErrorsTests:
 class ConfirmPasswordTests:
     """UserCreate.confirm_password must report under its own field name.
 
-    A @model_validator would land on '__all__', which the Django template
-    language cannot render (variables may not start with an underscore), so the
+    A @model_validator would land on '__all__'. Register.jsx shows each message
+    under the input of the same name, and there is no '__all__' input, so the
     check lives in a field validator reading info.data instead.
     """
 
