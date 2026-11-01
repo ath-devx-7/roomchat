@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import secrets
 import string
+import unicodedata
 
 from sqlalchemy import select
 
@@ -105,6 +106,42 @@ class AnonymousUser:
 
     def __hash__(self):
         return 1
+
+
+def normalize_email(email):
+    """Lowercase the domain part of an email address, as Django's UserManager does.
+
+    Only the domain is lowercased: the part before the @ can be case-sensitive.
+    """
+    email = email or ''
+    try:
+        email_name, domain_part = email.strip().rsplit('@', 1)
+    except ValueError:
+        return email  # no @ in it: leave it as it is
+    return email_name + '@' + domain_part.lower()
+
+
+def create_user(username, email='', password=None):
+    """Create, save and return a new User (port of Django's User.objects.create_user).
+
+    With no password, the user gets an unusable one: it starts with '!', so
+    check_password() never accepts anything for it.
+    """
+    if password is None:
+        hashed_password = UNUSABLE_PASSWORD_PREFIX + get_random_string(40)
+    else:
+        hashed_password = make_password(password)
+
+    user = User(
+        # NFKC turns look-alike Unicode characters into one standard form, so two
+        # usernames that look identical are stored identically (Django does the same).
+        username=unicodedata.normalize('NFKC', username),
+        email=normalize_email(email),
+        password=hashed_password,
+    )
+    db.add(user)
+    db.commit()  # rule 2: commit right after the write, like Django's autocommit
+    return user
 
 
 def authenticate(request=None, username=None, password=None):

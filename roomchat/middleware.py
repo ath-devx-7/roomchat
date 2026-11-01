@@ -31,6 +31,7 @@ CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_AGE = 60 * 60 * 24 * 7 * 52  # one year, in seconds (Django's default)
 CSRF_TOKEN_LENGTH = 32
 SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS', 'TRACE')
+ADMIN_PATH_PREFIX = '/admin/'  # sqladmin's mount; CsrfViewMiddleware checks it by Origin only
 
 # Same values Django's SecurityMiddleware / XFrameOptionsMiddleware sent.
 SECURITY_HEADERS = {
@@ -274,6 +275,7 @@ class CsrfViewMiddleware:
       1. if an Origin header is sent, it must be our site or a CSRF_TRUSTED_ORIGINS entry;
          over HTTPS without Origin, the Referer must match instead;
       2. the X-CSRFToken header must equal the csrftoken cookie.
+    Under /admin/ (sqladmin) only step 1 runs, and the Origin (or https Referer) is required.
     Failures get JSON 403 `{"error": "CSRF verification failed."}`.
 
     On the response it sets the csrftoken cookie when a view asked for it
@@ -321,6 +323,16 @@ class CsrfViewMiddleware:
         headers = Headers(scope=scope)
         host = headers.get('host', '')
         origin = headers.get('origin')
+
+        if scope['path'].startswith(ADMIN_PATH_PREFIX):
+            # sqladmin's plain HTML forms (and its jQuery DELETE) can't send X-CSRFToken, so
+            # the admin is protected by its origin instead: browsers always send Origin on
+            # these requests and another site can't fake it. Unlike below, a missing Origin
+            # is refused (over https a matching Referer may stand in).
+            if origin is not None:
+                return _origin_ok(origin, scope['scheme'], host)
+            return scope['scheme'] == 'https' and _referer_ok(headers.get('referer'), host)
+
         if origin is not None:
             if not _origin_ok(origin, scope['scheme'], host):
                 return False

@@ -1,9 +1,9 @@
 # Render Blueprint for RoomChat.
 #
 # Stands up three services: the ASGI web service, a Postgres database and a Key Value
-# (Redis) instance for the Channels layer. All three must share a region — fromDatabase
-# yields the database's *internal* hostname and fromService yields redis://red-xxxx:6379,
-# and neither resolves across regions.
+# (Redis) instance for the realtime layer (roomchat/realtime.py). All three must share a
+# region — fromDatabase yields the database's *internal* hostname and fromService yields
+# redis://red-xxxx:6379, and neither resolves across regions.
 
 databases:
   - name: roomchat-db
@@ -27,20 +27,22 @@ services:
     region: oregon
     # Any non-API path returns the SPA shell as a plain 200, signed in or not.
     healthCheckPath: /login
-    # migrate lives here because preDeployCommand requires a paid instance type. If it
-    # ever fails at build time, move it to the front of startCommand instead — safe on a
-    # single instance.
+    # alembic runs here because preDeployCommand requires a paid instance type. On the
+    # first deploy it adopts the database Django built (the baseline is skipped when
+    # rooms_room exists) and applies 0002. If it ever fails at build time, move it to
+    # the front of startCommand instead — safe on a single instance.
     #
     # No npm step: this runtime is python-only. The React bundle in static/react/ is
-    # built locally with `yarn build` and committed, and collectstatic just hashes and
-    # compresses it like any other asset.
+    # built locally with `yarn build` and committed; the app serves it from static/
+    # with ?v=<content hash> URLs, so there is no collectstatic step.
     buildCommand: >-
       pip install -r requirements.txt &&
-      python manage.py collectstatic --no-input &&
-      python manage.py migrate
-    # Daphne, not gunicorn: WebSockets need ASGI. --proxy-headers makes Daphne read the
-    # real client address out of X-Forwarded-For.
-    startCommand: daphne -b 0.0.0.0 -p $PORT --proxy-headers roomchat.asgi:application
+      alembic upgrade head
+    # uvicorn, not gunicorn: WebSockets need ASGI. --workers 1 is explicit so Render's
+    # WEB_CONCURRENCY can't change it. --proxy-headers + --forwarded-allow-ips '*' make
+    # uvicorn take the client address (X-Forwarded-For) and scheme (X-Forwarded-Proto:
+    # https) from Render's proxy; the port is only reachable through Render's network.
+    startCommand: uvicorn roomchat.asgi:application --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers --forwarded-allow-ips '*'
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.5

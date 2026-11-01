@@ -37,7 +37,7 @@ REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')
 
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.pubsub.RedisPubSubChannelLayer',
+        'BACKEND': 'roomchat.realtime.RedisChannelLayer',
         'CONFIG': {
             'hosts': [REDIS_URL],
         },

@@ -4,9 +4,9 @@ import { Logo } from "@/components/Brand";
 import { BOOTSTRAP } from "@/lib/api";
 import { ArrowRight, ShieldCheck, Users, Zap, MessageCircle } from "lucide-react";
 
-// Comes from Django via {% static %}. It cannot be a literal "/static/..." path or an
-// import: CompressedManifestStaticFilesStorage renames collected files, so only a URL
-// resolved server-side survives collectstatic. See templates/index.html.
+// Comes from the backend via static() (roomchat/staticfiles.py). It is not a literal
+// "/static/..." path or an import, because only a URL built server-side carries the
+// ?v=<content hash> that busts the cache after a rebuild. See templates/index.html.
 const HERO_IMG = BOOTSTRAP.heroImage;
 
 const features = [

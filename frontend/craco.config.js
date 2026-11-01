@@ -3,18 +3,17 @@
 // The production build writes straight into ../static/react/ with *stable*, unhashed
 // filenames, and emits no index.html. That is deliberate:
 //
-//   - Django serves the SPA shell itself (templates/index.html) so it can set the CSRF
-//     cookie and inject server-side values (the signed-in user, {% static %} asset URLs).
-//   - STORAGES['staticfiles'] is whitenoise's CompressedManifestStaticFilesStorage,
-//     which renames every collected file to name.<md5>.ext. Anything webpack hardcodes
-//     as an absolute /static/... URL would 404 after collectstatic, so webpack must not
-//     hardcode any — Django's manifest does the cache-busting instead.
+//   - The backend serves the SPA shell itself (templates/index.html) so it can set the
+//     CSRF cookie and inject server-side values (the signed-in user, static() asset URLs).
+//   - Cache-busting is done by the backend: roomchat/staticfiles.py static() appends
+//     ?v=<content hash> to each URL it renders, so a rebuilt file gets a new URL. A URL
+//     webpack hardcodes gets no hash, so webpack must not hardcode any.
 //   - For the same reason code splitting is off: a lazily-loaded chunk URL is baked into
-//     the bundle at build time and cannot survive the rename. Five pages, one bundle.
+//     the bundle at build time and never gets a ?v= hash. Five pages, one bundle.
 //
 // Corollary: do NOT `import` images or fonts from src/. Webpack would emit them with a
-// URL it cannot know the final name of. Put them in public/ and pass the {% static %}
-// URL through the bootstrap blob in templates/index.html, as the landing hero does.
+// URL the backend never hashes. Put them in public/ and pass the static() URL through
+// the bootstrap blob in templates/index.html, as the landing hero does.
 
 const path = require("path");
 

@@ -1,8 +1,11 @@
 from datetime import datetime
 from typing import List, Literal, Optional, Union, Annotated
 
-from django.contrib.auth.hashers import check_password
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, ConfigDict, model_validator
+from sqlalchemy import select
+
+from roomchat.auth import check_password
+from roomchat.db import db
 
 from .models import Room
 
@@ -71,10 +74,13 @@ class RoomJoin(BaseModel):
 
     @model_validator(mode='after')
     def validate_room_access(self) -> "RoomJoin":
-        try:
-            self._room = Room.objects.get(room_code=self.room_code)
-        except Room.DoesNotExist as exc:
-            raise ValueError("Room not found. Check the code and try again.") from exc
+        """Load the room and check it exists, the password matches and there's space."""
+        # .one_or_none() gives the room or None (Django raised Room.DoesNotExist).
+        self._room = db.scalars(
+            select(Room).where(Room.room_code == self.room_code)
+        ).one_or_none()
+        if self._room is None:
+            raise ValueError("Room not found. Check the code and try again.")
 
         if self._room.password and not check_password(self.password, self._room.password):
             raise ValueError("Incorrect room password.")

@@ -1,11 +1,8 @@
 # Claude #
 CLAUDE.md
 
-# Django #
+# Logs #
 *.log
-db.sqlite3
-db.sqlite3-journal
-staticfiles/
 
 # Frontend #
 # static/react/ is deliberately NOT ignored: it is the committed production build,
@@ -44,3 +41,5 @@ features.txt
 git-commits/
 backend-diff.txt
 changes.md
+migration_plan.md
+reports/

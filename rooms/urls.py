@@ -1,12 +1,17 @@
 """Room JSON endpoints. Mounted under /api/ by roomchat/urls.py."""
 
-from django.urls import path
+from fastapi import APIRouter
+
 from . import views
 
-urlpatterns = [
-    path('dashboard/', views.dashboard_api, name='dashboard_api'),
-    path('rooms/create/', views.create_room, name='create_room'),
-    path('rooms/join/', views.join_room, name='join_room'),
-    path('rooms/<str:room_code>/', views.room_detail_api, name='room_detail_api'),
-    path('invitations/', views.get_invitations_api, name='get_invitations_api'),
-]
+# GET and POST on every route, so the views' own method checks keep answering.
+METHODS = ['GET', 'POST']
+
+urlpatterns = APIRouter()
+urlpatterns.add_api_route('/dashboard/', views.dashboard_api, methods=METHODS, name='dashboard_api')
+# create/ and join/ must stay above rooms/{room_code}/: routes are tried in order, and
+# {room_code} would otherwise match the words "create" and "join".
+urlpatterns.add_api_route('/rooms/create/', views.create_room, methods=METHODS, name='create_room')
+urlpatterns.add_api_route('/rooms/join/', views.join_room, methods=METHODS, name='join_room')
+urlpatterns.add_api_route('/rooms/{room_code}/', views.room_detail_api, methods=METHODS, name='room_detail_api')
+urlpatterns.add_api_route('/invitations/', views.get_invitations_api, methods=METHODS, name='get_invitations_api')

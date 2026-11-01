@@ -1,12 +1,16 @@
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.db.models import Q
-from django.templatetags.static import static
-from django.views.decorators.csrf import ensure_csrf_cookie
+from fastapi import Depends, Request
+from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
+from sqlalchemy import and_, exists, or_, select
+from sqlalchemy.orm import joinedload
 
-from roomchat.errors import api_login_required, format_pydantic_errors, require_POST_json
-from roomchat.middleware import json_validation_errors
+from roomchat import settings
+from roomchat.db import db
+from roomchat.errors import (
+    JsonResponse, api_login_required, form_data, format_pydantic_errors, require_POST_json,
+)
+from roomchat.middleware import ensure_csrf_cookie, json_validation_errors
+from roomchat.staticfiles import static
 
 from .models import Room, RoomBan, RoomMembership, Message, RoomInvitation
 from accounts.models import Friendship
@@ -26,39 +30,49 @@ from .schemas import (
 
 from . import services
 
+# Jinja renders templates/index.html. `static` is made available inside templates so
+# index.html can write {{ static('react/css/main.css') }}.
+templates = Jinja2Templates(directory=settings.BASE_DIR / 'templates')
+templates.env.globals['static'] = static
+
 
 @ensure_csrf_cookie
-def spa(request, *args, **kwargs):
+def spa(request: Request):
     """Serve the React shell for every non-API route.
 
-    @ensure_csrf_cookie is load-bearing: Django only sets the csrftoken cookie when a
-    view reads the token, and every write the SPA performs sends it back as an
-    X-CSRFToken header. Without this the first POST after a cold load fails with 403.
+    @ensure_csrf_cookie is load-bearing: the csrftoken cookie is only set when a view
+    asks for it, and every write the SPA performs sends it back as an X-CSRFToken
+    header. Without this the first POST after a cold load fails with 403.
     """
     bootstrap = {
         # Bootstrapped rather than fetched so the router can redirect on first paint
         # instead of flashing a signed-out UI while /api/auth/me/ is in flight.
         'user': user_payload(request.user) if request.user.is_authenticated else None,
-        # Asset URLs must be resolved here, never hardcoded in the bundle: the staticfiles
-        # storage renames collected files, so only a static()-resolved path survives.
+        # Asset URLs must be resolved here, never hardcoded in the bundle: static()
+        # adds the ?v=<hash> that makes browsers fetch a rebuilt file.
         'heroImage': static('react/img/hero.jpg'),
     }
-    return render(request, 'index.html', {'bootstrap': bootstrap})
+    return templates.TemplateResponse(request, 'index.html', {'bootstrap': bootstrap})
 
 
 @api_login_required
-def dashboard_api(request):
+def dashboard_api(request: Request):
     """Everything the dashboard renders on load: friends, incoming friend requests,
     pending room invitations, and which room (if any) the user is currently in."""
-    friendships = Friendship.objects.filter(
-        Q(sender=request.user, status='accepted') |
-        Q(receiver=request.user, status='accepted')
-    ).select_related('sender', 'receiver')
+    # joinedload = Django's select_related: fetch sender and receiver in the same query.
+    friendships = db.scalars(select(Friendship).where(or_(
+        and_(Friendship.sender == request.user, Friendship.status == 'accepted'),
+        and_(Friendship.receiver == request.user, Friendship.status == 'accepted'),
+    )).options(joinedload(Friendship.sender), joinedload(Friendship.receiver))).all()
 
     friends = []
     for f in friendships:
+        # Same session as request.user, so `==` finds the same object (identity map).
         friend_user = f.receiver if f.sender == request.user else f.sender
-        membership = RoomMembership.objects.filter(user=friend_user).select_related('room').first()
+        membership = db.scalars(
+            select(RoomMembership).where(RoomMembership.user == friend_user)
+            .options(joinedload(RoomMembership.room))
+        ).first()
         friends.append(DashboardFriendResponse(
             friendship_id=f.id,
             user_id=friend_user.id,
@@ -74,9 +88,9 @@ def dashboard_api(request):
             sender_username=f.sender.username,
             created_at=f.created_at,
         )
-        for f in Friendship.objects.filter(
-            receiver=request.user, status='pending'
-        ).select_related('sender')
+        for f in db.scalars(select(Friendship).where(
+            Friendship.receiver == request.user, Friendship.status == 'pending'
+        ).options(joinedload(Friendship.sender))).all()
     ]
 
     pending_invitations = [
@@ -91,7 +105,10 @@ def dashboard_api(request):
         for inv in services.get_pending_invitations(request.user)
     ]
 
-    membership = RoomMembership.objects.filter(user=request.user).select_related('room').first()
+    membership = db.scalars(
+        select(RoomMembership).where(RoomMembership.user == request.user)
+        .options(joinedload(RoomMembership.room))
+    ).first()
 
     payload = DashboardResponse(
         friends=friends,
@@ -104,14 +121,14 @@ def dashboard_api(request):
 
 @api_login_required
 @require_POST_json
-def create_room(request):
+def create_room(request: Request, form=Depends(form_data)):
     """Create a new chat room and return its code."""
     try:
         room_data = RoomCreate(
-            name=request.POST.get('name', ''),
-            description=request.POST.get('description', ''),
-            capacity=request.POST.get('capacity', '10'),
-            password=request.POST.get('password', ''),
+            name=form.get('name', ''),
+            description=form.get('description', ''),
+            capacity=form.get('capacity', '10'),
+            password=form.get('password', ''),
         )
     except ValidationError as e:
         return JsonResponse({'errors': format_pydantic_errors(e)}, status=400)
@@ -124,19 +141,21 @@ def create_room(request):
 
 @api_login_required
 @require_POST_json
-def join_room(request):
+def join_room(request: Request, form=Depends(form_data)):
     """Verify a room code and optional password, then unlock the room for this session."""
     try:
         join_data = RoomJoin(
-            room_code=request.POST.get('room_code', ''),
-            password=request.POST.get('password', ''),
+            room_code=form.get('room_code', ''),
+            password=form.get('password', ''),
         )
     except ValidationError as e:
         return JsonResponse({'errors': format_pydantic_errors(e)}, status=400)
 
     # A correct password does not undo a ban, and a grant must never point at a
     # room the user cannot enter. Owners never hold a ban row, so no exemption.
-    if RoomBan.objects.filter(room=join_data.room, user=request.user).exists():
+    if db.scalar(select(exists().where(
+        RoomBan.room == join_data.room, RoomBan.user == request.user
+    ))):
         return JsonResponse({'error': 'You have been removed from this room.'}, status=403)
 
     # RoomJoin has already verified the password; unlock the room for as long as
@@ -149,13 +168,15 @@ def join_room(request):
 
 
 @api_login_required
-def room_detail_api(request, room_code):
+def room_detail_api(request: Request, room_code: str):
     """Room metadata plus message history, behind the room-access gates.
 
     The order of the checks below is the security spine of the app — see CLAUDE.md.
     Actual joining still happens over the WebSocket.
     """
-    room = Room.objects.filter(room_code=room_code).select_related('owner').first()
+    room = db.scalars(
+        select(Room).where(Room.room_code == room_code).options(joinedload(Room.owner))
+    ).first()
     if room is None:
         return JsonResponse({'error': 'This room no longer exists.'}, status=404)
 
@@ -166,7 +187,9 @@ def room_detail_api(request, room_code):
     # the message history below. Sitting above the password gate also closes the
     # invitation bypass for free — we return before the invitation branch runs, so a
     # friend re-inviting a banned user cannot mint a grant.
-    if not is_owner and RoomBan.objects.filter(room=room, user=request.user).exists():
+    if not is_owner and db.scalar(select(exists().where(
+        RoomBan.room == room, RoomBan.user == request.user
+    ))):
         return JsonResponse({'error': 'You have been removed from this room.'}, status=403)
 
     # The gate runs before the history query below, so a user who has not unlocked
@@ -176,21 +199,32 @@ def room_detail_api(request, room_code):
         # mint the same grant a correct password would have. This is the only place
         # an invitation grants access, which is why the WebSocket gate can stay a
         # plain session check.
-        invite = RoomInvitation.objects.filter(
-            room=room, receiver=request.user, status='accepted'
-        ).first()
+        invite = db.scalars(select(RoomInvitation).where(
+            RoomInvitation.room == room,
+            RoomInvitation.receiver == request.user,
+            RoomInvitation.status == 'accepted',
+        )).first()
         if not invite:
             return JsonResponse(
                 {'error': 'This room is protected. Please join using the password on the dashboard.'},
                 status=403,
             )
 
-        invite.delete()
+        db.delete(invite)
+        db.commit()  # rule 2: the invitation is consumed immediately, as in Django
         request.session['room_grant'] = room.room_code
 
-    history = Message.objects.filter(room=room).select_related(
-        'sender', 'reply_to', 'reply_to__sender'
-    ).order_by('created_at')[:100]
+    # The chained joinedload is Django's 'reply_to__sender': the replied-to message and
+    # its sender come back in the same query. [:100] becomes .limit(100).
+    history = db.scalars(
+        select(Message).where(Message.room == room)
+        .options(
+            joinedload(Message.sender),
+            joinedload(Message.reply_to).joinedload(Message.sender),
+        )
+        .order_by(Message.created_at)
+        .limit(100)
+    ).all()
 
     payload = RoomDetailResponse(
         room=RoomSummaryResponse(
@@ -228,7 +262,7 @@ def room_detail_api(request, room_code):
 
 @api_login_required
 @json_validation_errors
-def get_invitations_api(request):
+def get_invitations_api(request: Request):
     """Return pending room invitations as JSON."""
     invitations = services.get_pending_invitations(request.user)
 

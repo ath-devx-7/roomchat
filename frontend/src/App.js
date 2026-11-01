@@ -9,7 +9,7 @@ import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import ChatRoom from "@/pages/ChatRoom";
 
-// Seeded from window.__ROOMCHAT__, which Django renders into the shell. That means the
+// Seeded from window.__ROOMCHAT__, which the backend renders into the shell. That means the
 // first paint already knows whether the session is valid — no signed-out flash, and no
 // /api/auth/me/ round-trip before the router can decide where to send the user.
 const AuthContext = createContext(null);
