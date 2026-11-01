@@ -51,6 +51,23 @@ def spa(request: Request):
         # Asset URLs must be resolved here, never hardcoded in the bundle: static()
         # adds the ?v=<hash> that makes browsers fetch a rebuilt file.
         'heroImage': static('react/img/hero.jpg'),
+        'heroImageLight': static('react/img/hero-light.jpg'),
+        # A short looping recording of a live room for the landing hero, per colourway; the
+        # two images above are its posters.
+        'heroVideo': static('react/img/hero.webm'),
+        'heroVideoLight': static('react/img/hero-light.webm'),
+        # Captures of the app for the landing page's feature tiles (frontend/public/img/),
+        # one per colourway so the page shows the product in the mode it is viewed in.
+        'screens': {
+            'create': static('react/img/screen-create.png'),
+            'createLight': static('react/img/screen-create-light.png'),
+            'invite': static('react/img/screen-invite.png'),
+            'inviteLight': static('react/img/screen-invite-light.png'),
+            'owner': static('react/img/screen-owner.png'),
+            'ownerLight': static('react/img/screen-owner-light.png'),
+            'members': static('react/img/screen-members.png'),
+            'membersLight': static('react/img/screen-members-light.png'),
+        },
     }
     return templates.TemplateResponse(request, 'index.html', {'bootstrap': bootstrap})
 

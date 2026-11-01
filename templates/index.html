@@ -3,13 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light">
+    <meta name="color-scheme" content="light dark">
     <meta name="description" content="RoomChat — real-time, room-based chat. Create a room, share a code, start talking.">
     <title>RoomChat</title>
 
+    {# League Gothic (poster heads, room codes) and Newsreader (everything else), from Google. #}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=League+Gothic&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+    {# Applies the saved light/dark choice before the first paint, so the page never flashes #}
+    {# the wrong colourway. With nothing saved, tokens.css follows the OS setting. #}
+    <script>
+        try { var m = localStorage.getItem("roomchat-mode"); if (m === "light" || m === "dark") document.documentElement.dataset.mode = m; } catch (e) {}
+    </script>
 
     <link rel="stylesheet" href="{{ static('react/css/main.css') }}">
 </head>

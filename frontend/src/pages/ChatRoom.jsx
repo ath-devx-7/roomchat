@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { StatusDot } from "@/components/Brand";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -16,14 +16,14 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  ArrowLeft, Copy, Check, Users, Send, Reply, Pencil, Trash2, MoreVertical,
-  Crown, UserPlus, UserMinus, Settings, X, Smile, Paperclip, Lock, LogOut,
+  ArrowLeft, Copy, Check, Send, Reply, Pencil, Trash2, MoreVertical,
+  Crown, UserPlus, UserMinus, Settings, X, Lock, LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/App";
 import { useSocket } from "@/lib/useSocket";
-import { accentFor, clockTime, dayKey, dayLabel, initial } from "@/lib/format";
+import { clockTime, dayKey, dayLabel, initial, paperFor } from "@/lib/format";
 
 const DELETED_TEXT = "This message was deleted.";
 
@@ -43,6 +43,8 @@ export default function ChatRoom() {
   const [editing, setEditing] = useState(null);
   const [copied, setCopied] = useState(false);
   const [activity, setActivity] = useState("Connecting…");
+  // The member who joined a moment ago, so their row can flash once.
+  const [justJoined, setJustJoined] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -50,12 +52,11 @@ export default function ChatRoom() {
   // reconnect or a second toast.
   const leavingRef = useRef(false);
 
-  const accent = accentFor(code);
   const amOwner = ownerId != null && ownerId === user?.id;
 
   // Everyone in active_users_updated is by definition connected, so there is no
-  // away/offline state to represent inside a room (features.txt #12).
-  const online = members.length;
+  // away/offline state to represent inside a room (features.txt #12): the header shows
+  // members/capacity and the list carries no presence dots.
 
   useEffect(() => {
     let cancelled = false;
@@ -144,6 +145,8 @@ export default function ChatRoom() {
 
         case "user_joined":
           setActivity(`${data.username} joined the room`);
+          setJustJoined(data.user_id);
+          setTimeout(() => setJustJoined((id) => (id === data.user_id ? null : id)), 1700);
           break;
 
         case "user_left":
@@ -169,6 +172,7 @@ export default function ChatRoom() {
               replyTo: data.reply_to
                 ? { author: data.reply_to.sender_username, text: data.reply_to.content }
                 : undefined,
+              fresh: true, // arrived live, so it animates in
             },
           ]);
           break;
@@ -239,7 +243,7 @@ export default function ChatRoom() {
   });
 
   const requireSocket = () => {
-    toast.error("Still connecting — try again in a moment.");
+    toast.error("Still connecting. Try again in a moment.");
     return false;
   };
 
@@ -247,9 +251,9 @@ export default function ChatRoom() {
     navigator.clipboard
       ?.writeText(code)
       .then(() => {
+        // The button's label swaps to "Copied" for 2.5s; that is the feedback, so no toast.
         setCopied(true);
-        toast.success("Room code copied");
-        setTimeout(() => setCopied(false), 1500);
+        setTimeout(() => setCopied(false), 2500);
       })
       .catch(() => toast.error("Couldn't copy the room code"));
   };
@@ -316,30 +320,36 @@ export default function ChatRoom() {
 
   if (!room) {
     return (
-      <div className="grid h-screen place-items-center bg-background">
-        <p className="font-bold text-slate-400">Opening room…</p>
+      <div className="grid h-screen place-items-center bg-paper">
+        <p className="text-ink-3" role="status">Opening room…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      {/* Header */}
-      <header className="z-20 flex items-center justify-between border-b border-border bg-white px-4 py-3 shadow-sm sm:px-6" data-testid="room-header">
+    <div className="flex h-dvh flex-col bg-paper">
+      {/* Header: the room, its code and its capacity, all as measurements */}
+      <header className="z-20 flex items-center justify-between gap-3 border-b border-rule bg-paper px-3 py-2.5 sm:px-6" data-testid="room-header">
         <div className="flex min-w-0 items-center gap-3">
-          <Button variant="ghost" size="icon" className="rounded-full text-slate-500" onClick={handleLeaveRoom} data-testid="back-to-dashboard-button">
+          <Button variant="ghost" size="icon" onClick={handleLeaveRoom} aria-label="Back to dashboard" data-testid="back-to-dashboard-button">
             <ArrowLeft size={20} />
           </Button>
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-lg font-extrabold text-white" style={{ backgroundColor: accent }}>
+          <span
+            className="hidden h-11 w-11 shrink-0 place-items-center text-lg font-medium text-room-ink shadow-card sm:grid"
+            style={{ backgroundColor: paperFor(room.room_code) }}
+            aria-hidden="true"
+          >
             {initial(room.name)}
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-lg font-extrabold text-slate-900">{room.name}</h1>
-              {room.is_protected && <Lock size={14} className="text-slate-400" />}
+              <h1 className="truncate text-[32px] text-ink">{room.name}</h1>
+              {room.is_protected && (
+                <Lock size={14} className="shrink-0 text-ink-3" aria-label="Password protected" />
+              )}
             </div>
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" /> {online} online · {members.length}/{room.capacity} members
+            <p className="text-xs text-ink-3">
+              <span className="measure text-ink-2">{members.length}/{room.capacity}</span> members
             </p>
           </div>
         </div>
@@ -347,91 +357,93 @@ export default function ChatRoom() {
         <div className="flex items-center gap-2">
           <button
             onClick={copyCode}
-            className="hidden items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-bold text-slate-600 transition-colors hover:bg-accent hover:text-primary sm:flex"
+            className="hidden h-10 items-center gap-2 bg-paper-3 px-3 text-sm text-ink shadow-card transition-colors hover:bg-hover sm:flex"
+            aria-label={`Copy room code ${room.room_code}`}
             data-testid="copy-room-code-button"
           >
-            <span className="font-mono tracking-widest">{room.room_code}</span>
-            {copied ? <Check size={15} className="text-green-600" /> : <Copy size={15} />}
+            <span className="code-figure text-2xl">{room.room_code}</span>
+            {copied ? (
+              <span className="rc-pop flex items-center gap-1 text-sm font-medium" aria-live="polite">
+                <Check size={15} /> Copied
+              </span>
+            ) : (
+              <Copy size={15} />
+            )}
           </button>
+
+          <ThemeToggle />
 
           {/* Invite friend */}
           <Dialog>
             <DialogTrigger asChild>
-              <Button className="rounded-full font-bold" data-testid="open-invite-dialog-button">
-                <UserPlus size={17} className="mr-1.5" /> Invite
+              <Button variant="outline" data-testid="open-invite-dialog-button">
+                <UserPlus size={16} /> Invite
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-3xl sm:max-w-md" data-testid="invite-friend-dialog">
+            <DialogContent className="sm:max-w-md" data-testid="invite-friend-dialog">
               <DialogHeader>
-                <DialogTitle className="text-xl font-extrabold">Invite a friend</DialogTitle>
+                <DialogTitle>Invite a friend</DialogTitle>
                 <DialogDescription>Pull someone from your friends list into {room.name}.</DialogDescription>
               </DialogHeader>
-              <div className="mt-2 max-h-[50vh] space-y-1 overflow-y-auto rc-scroll">
+              <ul className="rc-scroll mt-2 max-h-[50vh] overflow-y-auto border-t border-rule-2">
                 {invitableFriends.length === 0 && (
-                  <p className="py-8 text-center text-sm text-slate-400">No friends left to invite.</p>
+                  <li className="py-8 text-sm text-ink-3">No friends left to invite.</li>
                 )}
                 {invitableFriends.map((f) => (
-                  <div key={f.user_id} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-secondary" data-testid={`invite-friend-row-${f.user_id}`}>
-                    <div className="relative">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>{initial(f.username)}</AvatarFallback>
-                      </Avatar>
-                      <span className="absolute -bottom-0.5 -right-0.5"><StatusDot status="offline" /></span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-slate-800">{f.username}</p>
-                      <p className="text-xs text-slate-400">@{f.username}</p>
-                    </div>
+                  <li key={f.user_id} className="flex items-center gap-3 border-b border-rule-2 py-2" data-testid={`invite-friend-row-${f.user_id}`}>
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback style={{ backgroundColor: paperFor(f.username) }}>{initial(f.username)}</AvatarFallback>
+                    </Avatar>
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{f.username}</p>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="rounded-full border-2 font-bold"
                       onClick={() => handleInviteFriend(f)}
                       disabled={Boolean(invited[f.user_id])}
                       data-testid={`invite-friend-${f.user_id}`}
                     >
                       {invited[f.user_id] ? "Invited" : "Invite"}
                     </Button>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </DialogContent>
           </Dialog>
 
           {/* Room menu (leave / owner controls) */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full text-slate-500" data-testid="room-settings-button">
+              <Button variant="ghost" size="icon" aria-label="Room menu" data-testid="room-settings-button">
                 <Settings size={20} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 rounded-2xl p-1.5">
-              <DropdownMenuItem className="rounded-xl font-semibold" onClick={copyCode}>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={copyCode}>
                 <Copy size={15} className="mr-2" /> Copy room code
               </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-xl font-semibold" onClick={handleLeaveRoom} data-testid="leave-room-menu-item">
+              <DropdownMenuItem onClick={handleLeaveRoom} data-testid="leave-room-menu-item">
                 <LogOut size={15} className="mr-2" /> Leave room
               </DropdownMenuItem>
               {amOwner && (
                 <>
                   <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5 text-xs font-extrabold uppercase tracking-wide text-slate-400">Owner controls</div>
+                  <div className="px-2 py-1.5 text-xs text-ink-3">Owner controls</div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <button className="flex w-full items-center rounded-xl px-2 py-1.5 text-sm font-semibold text-destructive hover:bg-destructive/10" data-testid="delete-room-menu-item">
+                      <button className="flex w-full items-center px-2 py-1.5 text-sm text-error transition-colors hover:bg-hover focus-visible:outline-offset-[-2px]" data-testid="delete-room-menu-item">
                         <Trash2 size={15} className="mr-2" /> Delete room
                       </button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-3xl">
+                    <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete this room?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This permanently removes “{room.name}” and its history for all {members.length} members. This can't be undone.
+                          This permanently removes “{room.name}” and its history for all {members.length} members. This can’t be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-full font-bold">Cancel</AlertDialogCancel>
-                        <AlertDialogAction className="rounded-full bg-destructive font-bold hover:bg-destructive/90" onClick={handleDeleteRoom} data-testid="confirm-delete-room-button">
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="bg-error text-error-ink hover:bg-error hover:opacity-90" onClick={handleDeleteRoom} data-testid="confirm-delete-room-button">
                           Delete room
                         </AlertDialogAction>
                       </AlertDialogFooter>
@@ -448,11 +460,11 @@ export default function ChatRoom() {
       <div className="flex min-h-0 flex-1">
         {/* Messages */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <div ref={scrollRef} className="chat-bg flex-1 overflow-y-auto rc-scroll px-4 py-6 sm:px-8" data-testid="message-list">
-            <div className="mx-auto max-w-3xl space-y-1">
+          <div ref={scrollRef} className="rc-scroll flex-1 overflow-y-auto px-4 py-6 sm:px-8" data-testid="message-list">
+            <div className="mx-auto max-w-3xl">
               {messages.length === 0 && (
-                <p className="py-10 text-center text-sm font-semibold text-slate-400">
-                  No messages yet — say hello.
+                <p className="py-10 text-center text-sm text-ink-3">
+                  No messages yet. Say hello.
                 </p>
               )}
               {messages.map((msg, idx) => {
@@ -462,10 +474,11 @@ export default function ChatRoom() {
                 return (
                   <div key={msg.id}>
                     {newDay && (
-                      <div className="mb-6 mt-2 flex justify-center">
-                        <span className="rounded-full bg-white/70 px-4 py-1.5 text-xs font-bold text-slate-500 shadow-sm">
-                          {dayLabel(msg.createdAt)}
-                        </span>
+                      // Day divider: the label between two hairlines.
+                      <div className="mb-4 mt-6 flex items-center gap-3 text-xs text-ink-3 first:mt-0">
+                        <span className="h-px flex-1 bg-rule" />
+                        {dayLabel(msg.createdAt)}
+                        <span className="h-px flex-1 bg-rule" />
                       </div>
                     )}
                     <MessageRow
@@ -482,57 +495,41 @@ export default function ChatRoom() {
           </div>
 
           {/* Composer */}
-          <div className="border-t border-border bg-white px-4 py-3 sm:px-8">
+          <div className="border-t border-rule bg-paper px-4 py-3 sm:px-8">
             <div className="mx-auto max-w-3xl">
               {(replyTo || editing) && (
-                <div className="mb-2 flex items-center gap-2 rounded-2xl bg-accent/60 px-4 py-2 rc-pop" data-testid="composer-context">
-                  <div className="h-8 w-1 rounded-full bg-primary" />
+                // Replying or editing is the current state: it sits on the screen's one fluorescent sheet.
+                <div className="sheet-fluoro rc-pop mb-3 flex items-center gap-3 px-3 py-2" data-testid="composer-context">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-extrabold text-primary">
+                    <p className="text-xs font-medium">
                       {editing ? "Editing message" : `Replying to ${replyTo.author}`}
                     </p>
-                    <p className="truncate text-sm text-slate-500">{editing ? draft : replyTo.text}</p>
+                    <p className="truncate text-sm">{editing ? draft : replyTo.text}</p>
                   </div>
-                  <button
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-signal-ink hover:bg-signal-hover hover:shadow-none"
                     onClick={() => { setReplyTo(null); setEditing(null); setDraft(""); }}
-                    className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-white"
+                    aria-label={editing ? "Cancel edit" : "Cancel reply"}
                     data-testid="cancel-context-button"
                   >
                     <X size={16} />
-                  </button>
+                  </Button>
                 </div>
               )}
-              <form onSubmit={handleSend} className="flex items-end gap-2" data-testid="composer-form">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full text-slate-400 shrink-0"
-                  title="Attachments aren't available yet"
-                  onClick={() => toast("Attachments aren't available yet.")}
-                >
-                  <Paperclip size={20} />
-                </Button>
-                <div className="relative flex-1">
-                  <Input
-                    ref={inputRef}
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    placeholder="Type a message…"
-                    className="h-12 rounded-full border-slate-200 bg-secondary/60 pl-5 pr-11 focus-visible:ring-2 focus-visible:ring-primary/30"
-                    data-testid="message-input"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    title="Emoji picker isn't available yet"
-                    onClick={() => toast("The emoji picker isn't available yet.")}
-                  >
-                    <Smile size={20} />
-                  </button>
-                </div>
-                <Button type="submit" size="icon" className="h-12 w-12 shrink-0 rounded-full shadow-floating transition-transform hover:scale-105" data-testid="send-message-button">
-                  <Send size={20} />
+              <form onSubmit={handleSend} className="flex items-center gap-2" data-testid="composer-form">
+                <Input
+                  ref={inputRef}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Type a message…"
+                  aria-label="Message"
+                  className="h-11 flex-1"
+                  data-testid="message-input"
+                />
+                <Button type="submit" size="icon" className="h-11 w-11 shrink-0" aria-label="Send message" data-testid="send-message-button">
+                  <Send size={18} />
                 </Button>
               </form>
             </div>
@@ -540,145 +537,162 @@ export default function ChatRoom() {
         </div>
 
         {/* Members sidebar */}
-        <aside className="hidden w-72 shrink-0 flex-col border-l border-border bg-white lg:flex" data-testid="members-sidebar">
-          <div className="border-b border-border px-5 py-4">
+        <aside className="hidden w-72 shrink-0 flex-col bg-paper-3 shadow-card lg:flex" data-testid="members-sidebar">
+          <div className="border-b border-rule-2 px-5 py-4">
             <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 font-extrabold text-slate-900">
-                <Users size={18} /> Members
-              </h2>
-              <Badge className="rounded-full bg-secondary text-slate-600 hover:bg-secondary" data-testid="member-count-badge">
+              <h2 className="text-[28px] text-ink">Members</h2>
+              <Badge className="measure" data-testid="member-count-badge">
                 {members.length}/{room.capacity}
               </Badge>
             </div>
-            <div className="mt-3 flex items-center gap-2 rounded-2xl bg-green-50 px-3 py-2 text-xs font-bold text-green-700 rc-pop" key={activity} data-testid="presence-activity">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+            <p className="mt-2 truncate text-xs text-ink-3" role="status" aria-live="polite" data-testid="presence-activity">
               {activity}
-            </div>
+            </p>
           </div>
-          <div className="flex-1 overflow-y-auto rc-scroll p-2">
+          <ul className="rc-scroll flex-1 overflow-y-auto px-2 py-2">
             {members.map((m) => {
               const rowOwner = m.is_owner;
               return (
-                <div key={m.user_id} className="group flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-secondary" data-testid={`member-${m.user_id}`}>
-                  <div className="relative">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>{initial(m.username)}</AvatarFallback>
-                    </Avatar>
-                    <span className="absolute -bottom-0.5 -right-0.5"><StatusDot status="online" /></span>
-                  </div>
+                <li
+                  key={m.user_id}
+                  className={`flex items-center gap-3 px-2 py-2 transition-colors hover:bg-hover ${justJoined === m.user_id ? "rc-flash" : ""}`}
+                  data-testid={`member-${m.user_id}`}
+                >
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback style={{ backgroundColor: paperFor(m.username) }}>{initial(m.username)}</AvatarFallback>
+                  </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5 truncate text-sm font-bold text-slate-800">
+                    <p className="flex items-center gap-1.5 truncate text-sm font-medium text-ink">
                       {m.user_id === user?.id ? "You" : m.username}
-                      {rowOwner && <Crown size={13} className="text-amber-500" />}
+                      {rowOwner && <Crown size={13} className="text-ink" aria-hidden="true" />}
                     </p>
-                    <p className="text-xs capitalize text-slate-400">{rowOwner ? "Owner" : "online"}</p>
+                    <p className="text-xs text-ink-3">{rowOwner ? "Owner" : "Member"}</p>
                   </div>
                   {amOwner && m.user_id !== user?.id && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="grid h-8 w-8 place-items-center rounded-full text-slate-400 opacity-0 transition-opacity hover:bg-slate-100 group-hover:opacity-100" data-testid={`member-menu-${m.user_id}`}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-ink-3"
+                          aria-label={`Moderate ${m.username}`}
+                          data-testid={`member-menu-${m.user_id}`}
+                        >
                           <MoreVertical size={16} />
-                        </button>
+                        </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 rounded-2xl p-1.5">
-                        <DropdownMenuItem className="rounded-xl font-semibold" onClick={() => handleTransfer(m)} data-testid={`transfer-owner-${m.user_id}`}>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onClick={() => handleTransfer(m)} data-testid={`transfer-owner-${m.user_id}`}>
                           <Crown size={15} className="mr-2" /> Transfer ownership
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-xl font-semibold text-destructive focus:text-destructive" onClick={() => handleKick(m)} data-testid={`kick-member-${m.user_id}`}>
+                        <DropdownMenuItem className="text-error focus:text-error" onClick={() => handleKick(m)} data-testid={`kick-member-${m.user_id}`}>
                           <UserMinus size={15} className="mr-2" /> Kick from room
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </aside>
       </div>
     </div>
   );
 }
 
+/** One chat message as a squared slip of paper: yours on the right on the "own" stock,
+ *  everyone else's on the left with their paper-coloured initial tile. Grouped follow-ups
+ *  drop the name and tile; messages that arrived live drop in. */
 function MessageRow({ msg, grouped, onReply, onEdit, onDelete }) {
+  // Bubble surface: deleted messages become a dashed outline with muted text.
+  const surface = msg.deleted
+    ? "border-dashed border-ink-3 bg-transparent text-ink-3"
+    : msg.self
+      ? "border-transparent bg-own text-ink shadow-card"
+      : "border-transparent bg-paper-3 text-ink shadow-card";
+
+  const bubble = (
+    <div className={`border px-3.5 py-2 ${surface} ${msg.fresh ? "rc-drop" : ""}`}>
+      {msg.replyTo && (
+        // Quoted preview: a short rule on the left, author over a one-line excerpt.
+        <div className="mb-1.5 border-l-2 border-ink-3 pl-2">
+          <p className="text-xs font-medium text-ink-2">{msg.replyTo.author}</p>
+          <p className="truncate text-xs text-ink-3">{msg.replyTo.text}</p>
+        </div>
+      )}
+      <p className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed ${msg.deleted ? "italic" : ""}`}>{msg.text}</p>
+    </div>
+  );
+
+  // Time (local, a measurement) and the edited flag, side by side under the bubble.
+  const meta = (
+    <span className={`mt-1 flex gap-2 text-xs text-ink-3 ${msg.self ? "mr-0.5" : "ml-0.5"}`}>
+      <span className="measure">{clockTime(msg.createdAt)}</span>
+      {msg.edited && <span>edited</span>}
+    </span>
+  );
+
   if (msg.self) {
     return (
-      <div className={`group flex items-end justify-end gap-2 ${grouped ? "mt-0.5" : "mt-3"}`} data-testid={`message-${msg.id}`}>
+      <div className={`group flex items-end justify-end gap-2 ${grouped ? "mt-1" : "mt-4"}`} data-testid={`message-${msg.id}`}>
         {!msg.deleted && <MsgActions msg={msg} onReply={onReply} onEdit={onEdit} onDelete={onDelete} self />}
         <div className="flex max-w-[75%] flex-col items-end">
-          <div className={`rounded-3xl rounded-br-md px-4 py-2.5 shadow-sm ${msg.deleted ? "bg-slate-200 text-slate-500" : "bg-primary text-white"}`}>
-            {msg.replyTo && (
-              <div className="mb-1.5 rounded-xl bg-white/15 px-3 py-1.5">
-                <p className="text-xs font-extrabold text-white/90">{msg.replyTo.author}</p>
-                <p className="truncate text-xs text-white/70">{msg.replyTo.text}</p>
-              </div>
-            )}
-            <p className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed ${msg.deleted ? "italic" : ""}`}>{msg.text}</p>
-          </div>
-          <span className="mr-1 mt-1 text-[11px] font-semibold text-slate-400">
-            {clockTime(msg.createdAt)}{msg.edited && " · edited"}
-          </span>
+          {bubble}
+          {meta}
         </div>
       </div>
     );
   }
   return (
-    <div className={`group flex items-end gap-2 ${grouped ? "mt-0.5" : "mt-3"}`} data-testid={`message-${msg.id}`}>
-      <div className="w-9 shrink-0">
+    <div className={`group flex items-end gap-2 ${grouped ? "mt-1" : "mt-4"}`} data-testid={`message-${msg.id}`}>
+      <div className="w-9 shrink-0 self-start">
         {!grouped && (
           <Avatar className="h-9 w-9">
-            <AvatarFallback>{initial(msg.author)}</AvatarFallback>
+            <AvatarFallback style={{ backgroundColor: paperFor(msg.author) }}>{initial(msg.author)}</AvatarFallback>
           </Avatar>
         )}
       </div>
       <div className="flex max-w-[75%] flex-col items-start">
-        {!grouped && <span className="mb-0.5 ml-1 text-xs font-extrabold text-slate-500">{msg.author}</span>}
-        <div className={`rounded-3xl rounded-bl-md border px-4 py-2.5 shadow-sm ${msg.deleted ? "border-slate-200 bg-slate-100 text-slate-500" : "border-slate-200 bg-white text-slate-800"}`}>
-          {msg.replyTo && (
-            <div className="mb-1.5 rounded-xl bg-accent/70 px-3 py-1.5">
-              <p className="text-xs font-extrabold text-primary">{msg.replyTo.author}</p>
-              <p className="truncate text-xs text-slate-500">{msg.replyTo.text}</p>
-            </div>
-          )}
-          <p className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed ${msg.deleted ? "italic" : ""}`}>{msg.text}</p>
-        </div>
-        <span className="ml-1 mt-1 text-[11px] font-semibold text-slate-400">
-          {clockTime(msg.createdAt)}{msg.edited && " · edited"}
-        </span>
+        {!grouped && <span className="mb-1 ml-0.5 text-xs font-medium text-ink-2">{msg.author}</span>}
+        {bubble}
+        {meta}
       </div>
       {!msg.deleted && <MsgActions msg={msg} onReply={onReply} onEdit={onEdit} onDelete={onDelete} />}
     </div>
   );
 }
 
+/** Reply and the message menu beside a bubble. Hidden until the row is hovered or anything
+ *  in it has keyboard focus, and always shown on touch screens, which cannot hover. */
 function MsgActions({ msg, onReply, onEdit, onDelete, self }) {
   return (
-    <div className={`flex items-center self-center opacity-0 transition-opacity group-hover:opacity-100 ${self ? "order-first" : ""}`}>
-      <button onClick={() => onReply(msg)} className="grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Reply" data-testid={`reply-message-${msg.id}`}>
+    <div className={`flex items-center self-center opacity-0 transition-opacity duration-micro group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 ${self ? "order-first" : ""}`}>
+      <Button size="icon" variant="ghost" className="h-8 w-8 text-ink-3" onClick={() => onReply(msg)} aria-label="Reply" title="Reply" data-testid={`reply-message-${msg.id}`}>
         <Reply size={16} />
-      </button>
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700" data-testid={`message-menu-${msg.id}`}>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-ink-3 data-[state=open]:opacity-100" aria-label="Message options" data-testid={`message-menu-${msg.id}`}>
             <MoreVertical size={16} />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         {/* Edit and delete are sender-only: the consumer filters both on sender=self.user,
             so offering them on someone else's message would only produce an error toast. */}
-        <DropdownMenuContent align={self ? "start" : "end"} className="w-40 rounded-2xl p-1.5">
-          <DropdownMenuItem className="rounded-xl font-semibold" onClick={() => onReply(msg)}>
+        <DropdownMenuContent align={self ? "start" : "end"} className="w-40">
+          <DropdownMenuItem onClick={() => onReply(msg)}>
             <Reply size={15} className="mr-2" /> Reply
           </DropdownMenuItem>
           {self && (
-            <DropdownMenuItem className="rounded-xl font-semibold" onClick={() => onEdit(msg)} data-testid={`edit-message-${msg.id}`}>
+            <DropdownMenuItem onClick={() => onEdit(msg)} data-testid={`edit-message-${msg.id}`}>
               <Pencil size={15} className="mr-2" /> Edit
             </DropdownMenuItem>
           )}
           {self && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-xl font-semibold text-destructive focus:text-destructive" onClick={() => onDelete(msg)} data-testid={`delete-message-${msg.id}`}>
+              <DropdownMenuItem className="text-error focus:text-error" onClick={() => onDelete(msg)} data-testid={`delete-message-${msg.id}`}>
                 <Trash2 size={15} className="mr-2" /> Delete
               </DropdownMenuItem>
             </>

@@ -44,7 +44,7 @@ function App() {
           </Routes>
         </BrowserRouter>
       </AuthContext.Provider>
-      <Toaster position="top-right" richColors closeButton />
+      <Toaster position="top-right" closeButton />
     </div>
   );
 }

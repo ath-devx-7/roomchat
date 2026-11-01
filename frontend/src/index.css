@@ -1,44 +1,42 @@
-/* Nunito is loaded by a <link> in templates/index.html (and frontend/public/index.html
-   for the dev server). An @import here would block the stylesheet on a second request. */
+/* Hallmark · shape: Bento Grid (/) + app screen (/login /register /dashboard /room) · genre: playful · theme: Paste-up (deal 2/3, seed friendly-real-time-room-chat-62db·edb5c6a6·2026-11-01·r0, by choice) · redesign: full
+ * hero: Stage (/) · nav: edge-aligned strip · footer: colophon · imagery: the product (a live recording and captures) · signature: the room code on a fluorescent sheet over a live room
+ * axes: mid/display-condensed/chromatic-yellow · pasteup: kraft (light) + black wall (dark, sheets in grey paper) · modes: light+dark · posture: committed · contrast: pass · fold: pass · built: the project · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H5 E4 S4 R4 V4 · weakest: E (thin facts), carried by the product itself (a live recording, a working code box) and true product numbers as flyers */
+/* Hallmark · waive 8: the landing keeps the content it had plus the code box the owner asked for; no pricing or questions exist to build
+ * waive pasteup-photo: the product captures stay in colour; the copier rule is for photographs, and these are screens of the app itself
+ * waive pasteup-black-wall: dark-mode sheets are grey paper, not white, so one toner colour holds on every surface (dark-mode.md parity) */
+/* Fonts (League Gothic and Newsreader, from Google) are loaded by <link>s in templates/index.html
+   (and frontend/public/index.html for the dev server). An @import here would block the stylesheet. */
+@import url("./tokens.css");
+@import url("./base.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-    margin: 0;
-    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: #f8fafc;
-}
-
-code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, monospace;
-}
-
-@layer base {
-    :root {
-        --background: 210 40% 98%;
-        --foreground: 222 47% 11%;
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
-        --primary: 210 82% 56%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 210 40% 96%;
-        --secondary-foreground: 222 47% 11%;
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
-        --accent: 210 92% 95%;
-        --accent-foreground: 210 82% 40%;
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 100%;
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 210 82% 56%;
-        --radius: 1rem;
-    }
+/* shadcn/ui reads these names; point them at the Paste-up tokens so the ui/ components follow
+   the theme and the light/dark switch. Popovers and cards are copy-paper sheets. */
+:root {
+    --background: var(--color-paper);
+    --foreground: var(--color-ink);
+    --card: var(--color-paper-3);
+    --card-foreground: var(--color-ink);
+    --popover: var(--color-paper-3);
+    --popover-foreground: var(--color-ink);
+    --primary: var(--color-accent);
+    --primary-foreground: var(--color-accent-ink);
+    --secondary: var(--color-paper-3);
+    --secondary-foreground: var(--color-ink);
+    --muted: var(--color-paper-2);
+    --muted-foreground: var(--color-muted);
+    --accent: var(--color-hover);
+    --accent-foreground: var(--color-ink);
+    --destructive: var(--color-error);
+    --destructive-foreground: var(--color-error-ink);
+    --border: var(--color-rule);
+    --input: var(--color-ink);
+    --ring: var(--color-focus);
+    --radius: var(--radius-card);
 }
 
 @layer base {
@@ -48,66 +46,169 @@ code {
     body {
         @apply bg-background text-foreground;
     }
+    /* Preflight resets these after base.css loads, so set them again here. */
+    body {
+        font-family: var(--font-body);
+        line-height: 1.5;
+    }
+    /* Poster heads: League Gothic capitals. Never under 28px, so small heads opt out
+       with font-sans normal-case (the Newsreader voice). */
+    h1, h2 {
+        font-family: var(--font-display);
+        font-weight: var(--display-weight);
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-display);
+        line-height: 1;
+        overflow-wrap: break-word;
+        min-width: 0;
+    }
+    h1 {
+        line-height: 0.92;
+    }
+    h3 {
+        font-family: var(--font-body);
+        font-weight: 500;
+        line-height: 1.2;
+    }
 }
 
-/* Custom scrollbars */
+/* Scrollbars inside panels (message list, friends list) */
 .rc-scroll::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 .rc-scroll::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
-    border-radius: 999px;
+    background-color: var(--color-rule);
 }
 .rc-scroll::-webkit-scrollbar-track {
     background: transparent;
 }
 
-@keyframes rc-fade-up {
+/* A number that measures something (capacity, counts, times): tabular figures. */
+.measure {
+    font-variant-numeric: tabular-nums;
+}
+
+/* A room code set as a poster figure. */
+.code-figure {
+    font-family: var(--font-display);
+    letter-spacing: 0.06em;
+    line-height: 0.95;
+}
+
+/* Paper lifts, not boxes: a copy sheet on the board, and a raised sheet. */
+.sheet {
+    background: var(--color-paper-3);
+    box-shadow: var(--shadow-card);
+}
+.sheet-raised {
+    background: var(--color-paper-3);
+    box-shadow: var(--shadow-sheet);
+}
+/* The one fluorescent sheet a screen, with toner type. */
+.sheet-fluoro {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    box-shadow: var(--shadow-sheet);
+}
+
+/* The fibre wash on a kraft band: a low-frequency tan tint, never under running text. */
+.fibre {
+    position: relative;
+    isolation: isolate;
+}
+.fibre::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.5;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02 0.03' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.3 0 0 0 0.28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+[data-mode="dark"] .fibre::before {
+    opacity: 0.35;
+    mix-blend-mode: screen;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-mode]) .fibre::before {
+        opacity: 0.35;
+        mix-blend-mode: screen;
+    }
+}
+
+/* Captures come in two boards; show the one that matches the mode on screen.
+   Same rule as tokens.css: a stored choice wins, else the OS setting. Kraft is the default. */
+.rc-dark-only {
+    display: none;
+}
+[data-mode="dark"] .rc-dark-only {
+    display: block;
+}
+[data-mode="dark"] .rc-light-only {
+    display: none;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-mode]) .rc-dark-only {
+        display: block;
+    }
+    :root:not([data-mode]) .rc-light-only {
+        display: none;
+    }
+}
+
+/* Micro-interactions, paper physics only. base.css also collapses every animation under
+   reduced motion; these say so explicitly. */
+
+/* A new chat message drops onto the board like a slip of paper. */
+@keyframes rc-drop {
     from {
         opacity: 0;
-        transform: translateY(12px);
+        transform: translateY(-8px) rotate(-0.8deg);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: none;
     }
 }
-.rc-fade-up {
-    animation: rc-fade-up 0.5s ease-out both;
+.rc-drop {
+    animation: rc-drop var(--dur-short) var(--ease-out) both;
 }
 
+/* A member who just joined: a fluorescent edge flashes round their row, then settles. An
+   edge, not a fill, so the row's own text keeps its contrast on both boards. */
+@keyframes rc-flash {
+    from {
+        box-shadow: inset 0 0 0 2px var(--color-accent), inset 8px 0 0 var(--color-accent);
+    }
+    to {
+        box-shadow: inset 0 0 0 2px transparent, inset 8px 0 0 transparent;
+    }
+}
+.rc-flash {
+    animation: rc-flash 1.6s var(--ease-out);
+}
+
+/* A label that swaps (Copied) pops in. */
 @keyframes rc-pop {
     from {
         opacity: 0;
-        transform: scale(0.96);
+        transform: scale(0.9);
     }
     to {
         opacity: 1;
-        transform: scale(1);
+        transform: none;
     }
 }
 .rc-pop {
-    animation: rc-pop 0.25s ease-out both;
+    animation: rc-pop var(--dur-micro) var(--ease-out) both;
 }
 
-@keyframes rc-pulse-ring {
-    0% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+@media (prefers-reduced-motion: reduce) {
+    .rc-drop,
+    .rc-flash,
+    .rc-pop {
+        animation: none;
     }
-    70% {
-        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-    }
-}
-.rc-online-ring {
-    animation: rc-pulse-ring 2s infinite;
-}
-
-.chat-bg {
-    background-color: #f1f5f9;
-    background-image: radial-gradient(#dbe4ef 1px, transparent 1px);
-    background-size: 22px 22px;
 }
