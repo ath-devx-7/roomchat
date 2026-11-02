@@ -1,0 +1,367 @@
+- generic [active] [ref=f33e1]:
+  - banner [ref=f33e2]:
+    - img "Impeccable" [ref=f33e4]
+  - main [ref=f33e19]:
+    - generic [ref=f33e20]:
+      - 'heading "Choose RoomChat''s new visual world (round 5: content-rich, three themes)" [level=1] [ref=f33e29]'
+      - paragraph [ref=f33e30]: "Every card is a full landing page with the same real content: a working demo room, join-by-code, six features with their technical detail, the path of a message, the dashboard, proposed extras and the stack. Each has Light (tinted), Dark and Black themes: open a sketch and use the switch in its header. The one-line take is only my opinion."
+      - generic [ref=f33e31]:
+        - generic [ref=f33e32]:
+          - article [ref=f33e33]:
+            - generic [ref=f33e34]:
+              - generic [ref=f33e35]:
+                - generic [ref=f33e36]:
+                  - generic [ref=f33e37]: sketching · 4s
+                  - paragraph [ref=f33e40]: sketch
+                  - generic [ref=f33e41]:
+                    - button "Expand the image" [ref=f33e42] [cursor=pointer]
+                    - button "Flip the card" [ref=f33e45] [cursor=pointer]:
+                      - generic [ref=f33e49]: Details
+                - generic [ref=f33e50]:
+                  - paragraph [ref=f33e51]: "developer documentation sites: section nav, reference pages, code samples"
+                  - heading "Protocol Docs" [level=2] [ref=f33e52]
+                  - paragraph [ref=f33e53]: The landing reads like the project's own documentation, with the live demo pinned beside it.
+                  - generic [ref=f33e54]:
+                    - generic [ref=f33e55]:
+                      - generic "#ecf3ee" [ref=f33e56]
+                      - generic "#13221a" [ref=f33e57]
+                      - generic "#0f766e" [ref=f33e58]
+                      - generic "#0c1611" [ref=f33e59]
+                      - generic "#151515" [ref=f33e60]
+                    - generic [ref=f33e61]: sticky section nav
+                    - generic [ref=f33e62]: real request/frame samples
+                    - generic [ref=f33e63]: pinned demo rail
+                  - paragraph [ref=f33e64]:
+                    - generic [ref=f33e65]: Risk
+                    - text: Can feel like a docs site rather than a product; the app screens would need their own calmer layout.
+                  - button "Build this" [ref=f33e66] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Protocol Docs
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: "Left: section menu. Centre: headline, join-by-code, six stats, then one doc section per feature with its real HTTP or WebSocket frame. Right: the demo room and its frames, pinned while you scroll."
+                  - paragraph:
+                    - generic: The case
+                    - text: "My take: the most technical and the most honest for recruiters; every claim has the real frame next to it."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Can feel like a docs site rather than a product; the app screens would need their own calmer layout.
+                  - button "Build this"
+          - article [ref=f33e67]:
+            - generic [ref=f33e68]:
+              - generic [ref=f33e69]:
+                - generic [ref=f33e70]: IMPECCABLE’S PICK
+                - generic [ref=f33e71]:
+                  - generic [ref=f33e72]: sketching · 4s
+                  - paragraph [ref=f33e75]: sketch
+                  - generic [ref=f33e76]:
+                    - button "Expand the image" [ref=f33e77] [cursor=pointer]
+                    - button "Flip the card" [ref=f33e80] [cursor=pointer]:
+                      - generic [ref=f33e84]: Details
+                - generic [ref=f33e85]:
+                  - paragraph [ref=f33e86]: "real-time product consoles: dense panes, live logs, status lights"
+                  - heading "Live Console" [level=2] [ref=f33e87]
+                  - paragraph [ref=f33e88]: "The landing opens on the app itself: members, chat and a live frame log side by side."
+                  - generic [ref=f33e89]:
+                    - generic [ref=f33e90]:
+                      - generic "#eaf0f8" [ref=f33e91]
+                      - generic "#0f1a2b" [ref=f33e92]
+                      - generic "#2563eb" [ref=f33e93]
+                      - generic "#0b1220" [ref=f33e94]
+                      - generic "#141414" [ref=f33e95]
+                    - generic [ref=f33e96]: three-pane console
+                    - generic [ref=f33e97]: WebSocket frame log
+                    - generic [ref=f33e98]: fact grid
+                  - paragraph [ref=f33e99]:
+                    - generic [ref=f33e100]: Risk
+                    - text: Familiar product-console look; it relies on the demo being lively.
+                  - button "Build this" [ref=f33e101] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Live Console
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: "Left column: headline, join-by-code, four facts. Right: a three-pane console (members · chat · frames) running the demo; feature cards with tech notes below."
+                  - paragraph:
+                    - generic: The case
+                    - text: "My take: shows the real-time behaviour fastest, and the same panes carry straight into the chat page."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Familiar product-console look; it relies on the demo being lively.
+                  - button "Build this"
+          - article [ref=f33e102]:
+            - generic [ref=f33e103]:
+              - generic [ref=f33e104]:
+                - generic [ref=f33e105]:
+                  - generic [ref=f33e106]: sketching · 4s
+                  - paragraph [ref=f33e109]: sketch
+                  - generic [ref=f33e110]:
+                    - button "Expand the image" [ref=f33e111] [cursor=pointer]
+                    - button "Flip the card" [ref=f33e114] [cursor=pointer]:
+                      - generic [ref=f33e118]: Details
+                - generic [ref=f33e119]:
+                  - paragraph [ref=f33e120]: "modern bento layouts: mixed-size tiles"
+                  - heading "Bento Grid" [level=2] [ref=f33e121]
+                  - paragraph [ref=f33e122]: "Everything is a tile: the first screen is already full of the product."
+                  - generic [ref=f33e123]:
+                    - generic [ref=f33e124]:
+                      - generic "#efedf8" [ref=f33e125]
+                      - generic "#1b1530" [ref=f33e126]
+                      - generic "#6d28d9" [ref=f33e127]
+                      - generic "#110d1d" [ref=f33e128]
+                      - generic "#131313" [ref=f33e129]
+                    - generic [ref=f33e130]: rounded tiles
+                    - generic [ref=f33e131]: one dark hero tile
+                    - generic [ref=f33e132]: violet accent
+                  - paragraph [ref=f33e133]:
+                    - generic [ref=f33e134]: Risk
+                    - text: Bento grids are a very common modern look.
+                  - button "Build this" [ref=f33e135] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Bento Grid
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: "A 12-column tile grid: headline tile, big demo-room tile, code tile, capacity/history/tests tiles, a stack tile and a live frames tile."
+                  - paragraph:
+                    - generic: The case
+                    - text: "My take: the densest first screen; very modern, a little expected."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Bento grids are a very common modern look.
+                  - button "Build this"
+          - article [ref=f33e136]:
+            - generic [ref=f33e137]:
+              - generic [ref=f33e138]:
+                - generic [ref=f33e139]:
+                  - generic [ref=f33e140]: sketching · 4s
+                  - paragraph [ref=f33e143]: sketch
+                  - generic [ref=f33e144]:
+                    - button "Expand the image" [ref=f33e145] [cursor=pointer]
+                    - button "Flip the card" [ref=f33e148] [cursor=pointer]:
+                      - generic [ref=f33e152]: Details
+                - generic [ref=f33e153]:
+                  - paragraph [ref=f33e154]: "project case studies: chapters, figures, margin notes"
+                  - heading "Case Study" [level=2] [ref=f33e155]
+                  - paragraph [ref=f33e156]: "The landing is a project write-up: idea, features, architecture, the app, stack."
+                  - generic [ref=f33e157]:
+                    - generic [ref=f33e158]:
+                      - generic "#e8f2f1" [ref=f33e159]
+                      - generic "#0f1f1e" [ref=f33e160]
+                      - generic "#d9481f" [ref=f33e161]
+                      - generic "#0b1716" [ref=f33e162]
+                      - generic "#141414" [ref=f33e163]
+                    - generic [ref=f33e164]: serif chapter heads
+                    - generic [ref=f33e165]: numbered figures
+                    - generic [ref=f33e166]: metadata table
+                  - paragraph [ref=f33e167]:
+                    - generic [ref=f33e168]: Risk
+                    - text: Reads like a portfolio piece more than an app; the app screens need a plainer register.
+                  - button "Build this" [ref=f33e169] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Case Study
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: Big serif title with a project metadata table; Fig. 1 is the demo room with notes and join-by-code beside it; then numbered chapters.
+                  - paragraph:
+                    - generic: The case
+                    - text: "My take: the clearest story for an interviewer reading top to bottom."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Reads like a portfolio piece more than an app; the app screens need a plainer register.
+                  - button "Build this"
+          - article [ref=f33e170]:
+            - generic [ref=f33e171]:
+              - generic [ref=f33e172]:
+                - generic [ref=f33e173]:
+                  - generic [ref=f33e174]: sketching · 4s
+                  - paragraph [ref=f33e177]: sketch
+                  - generic [ref=f33e178]:
+                    - button "Expand the image" [ref=f33e179] [cursor=pointer]
+                    - button "Flip the card" [ref=f33e182] [cursor=pointer]:
+                      - generic [ref=f33e186]: Details
+                - generic [ref=f33e187]:
+                  - paragraph [ref=f33e188]: "1990s pagers: plastic shells, LCD readouts, rubber keys"
+                  - heading "The Pager" [level=2] [ref=f33e189]
+                  - paragraph [ref=f33e190]: "Every room code is a page: the big LCD readout mirrors the live room."
+                  - generic [ref=f33e191]:
+                    - generic [ref=f33e192]:
+                      - generic "#e3e7da" [ref=f33e193]
+                      - generic "#c3cfa8" [ref=f33e194]
+                      - generic "#ff6a1a" [ref=f33e195]
+                      - generic "#0c2523" [ref=f33e196]
+                      - generic "#232623" [ref=f33e197]
+                    - generic [ref=f33e198]: plastic shell panels
+                    - generic [ref=f33e199]: LCD readouts
+                    - generic [ref=f33e200]: rubber keys
+                  - paragraph [ref=f33e201]:
+                    - generic [ref=f33e202]: Risk
+                    - text: A strong theme; must stay readable on the app screens.
+                  - button "Build this" [ref=f33e203] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · The Pager
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: A wide LCD readout shows the code and the latest event; below, copy with rubber-key buttons and LCD code cells, and the demo room in a pager-shaped device. Features are 'pages'.
+                  - paragraph:
+                    - generic: The case
+                    - text: "Rebuilt as you asked. My take: the most distinctive; dark mode (backlight on) is the best of the three."
+                  - paragraph:
+                    - generic: Risk
+                    - text: A strong theme; must stay readable on the app screens.
+                  - button "Build this"
+          - article [ref=f33e204]:
+            - generic [ref=f33e205]:
+              - generic [ref=f33e206]:
+                - generic [ref=f33e207]:
+                  - generic [ref=f33e208]: sketching · 4s
+                  - paragraph [ref=f33e211]: sketch
+                  - generic [ref=f33e212]:
+                    - button "Expand the image" [ref=f33e213] [cursor=pointer]
+                    - button "Flip the card" [ref=f33e216] [cursor=pointer]:
+                      - generic [ref=f33e220]: Details
+                - generic [ref=f33e221]:
+                  - paragraph [ref=f33e222]: "Y2K-revival sticker sheets: holo foil, kiss-cut borders"
+                  - heading "Holo Sticker Sheet" [level=2] [ref=f33e223]
+                  - paragraph [ref=f33e224]: Codes and numbers are holographic stickers; everything else is clean white sheets.
+                  - generic [ref=f33e225]:
+                    - generic [ref=f33e226]:
+                      - generic "#eceffb" [ref=f33e227]
+                      - generic "#151730" [ref=f33e228]
+                      - generic "#ff3d7f" [ref=f33e229]
+                      - generic "#10112a" [ref=f33e230]
+                      - generic "#141414" [ref=f33e231]
+                    - generic [ref=f33e232]: backing grid
+                    - generic [ref=f33e233]: white sheets
+                    - generic [ref=f33e234]: holo foil (codes only)
+                  - paragraph [ref=f33e235]:
+                    - generic [ref=f33e236]: Risk
+                    - text: Holo foil is close to an overused gradient look; it is limited to codes and numbers.
+                  - button "Build this" [ref=f33e237] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Holo Sticker Sheet
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: A white intro sheet with a big foil code sticker beside the demo room sheet; six foil number stickers underneath. The foil shine follows your cursor.
+                  - paragraph:
+                    - generic: The case
+                    - text: "Rebuilt as you asked. My take: playful but tidy; the foil is a nice signature."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Holo foil is close to an overused gradient look; it is limited to codes and numbers.
+                  - button "Build this"
+          - article [ref=f33e238]:
+            - generic [ref=f33e239]:
+              - generic [ref=f33e240]:
+                - generic [ref=f33e241]:
+                  - generic [ref=f33e242]: sketching · 4s
+                  - paragraph [ref=f33e245]: sketch
+                  - generic [ref=f33e246]:
+                    - button "Expand the image" [ref=f33e247] [cursor=pointer]
+                    - button "Flip the card" [ref=f33e250] [cursor=pointer]:
+                      - generic [ref=f33e254]: Details
+                - generic [ref=f33e255]:
+                  - paragraph [ref=f33e256]: "operator switchboards: jacks, ivory labels, lamps"
+                  - heading "The Switchboard" [level=2] [ref=f33e257]
+                  - paragraph [ref=f33e258]: Rooms and members are jacks on a board; a lamp lights for each person connected.
+                  - generic [ref=f33e259]:
+                    - generic [ref=f33e260]:
+                      - generic "#ebe5d8" [ref=f33e261]
+                      - generic "#1a1613" [ref=f33e262]
+                      - generic "#b8893a" [ref=f33e263]
+                      - generic "#15100c" [ref=f33e264]
+                      - generic "#141414" [ref=f33e265]
+                    - generic [ref=f33e266]: bakelite board
+                    - generic [ref=f33e267]: brass rings
+                    - generic [ref=f33e268]: ivory labels
+                    - generic [ref=f33e269]: amber lamps
+                  - paragraph [ref=f33e270]:
+                    - generic [ref=f33e271]: Risk
+                    - text: Warm vintage look; close to a common cream-and-brass style.
+                  - button "Build this" [ref=f33e272] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · The Switchboard
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: A switchboard strip across the top whose lamps follow the demo's member list; condensed engraved headline; the demo room on a dark 'line' panel.
+                  - paragraph:
+                    - generic: The case
+                    - text: "Rebuilt as you asked. My take: the lamps-as-presence idea works well."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Warm vintage look; close to a common cream-and-brass style.
+                  - button "Build this"
+          - article [ref=f33e273]:
+            - generic [ref=f33e274]:
+              - generic [ref=f33e275]:
+                - generic [ref=f33e276]: The standing door
+                - generic [ref=f33e277]:
+                  - generic [ref=f33e278]: sketching · 4s
+                  - paragraph [ref=f33e281]: sketch
+                  - generic [ref=f33e282]:
+                    - button "Expand the image" [ref=f33e283] [cursor=pointer]
+                    - button "Flip the card" [ref=f33e286] [cursor=pointer]:
+                      - generic [ref=f33e290]: Details
+                - generic [ref=f33e291]:
+                  - heading "Modern standard" [level=2] [ref=f33e292]
+                  - paragraph [ref=f33e293]: A clean, polished chat-product page, rebuilt with full content.
+                  - generic [ref=f33e294]:
+                    - generic [ref=f33e295]:
+                      - generic "#edf3fb" [ref=f33e296]
+                      - generic "#0f172a" [ref=f33e297]
+                      - generic "#2b8cf0" [ref=f33e298]
+                      - generic "#0b1322" [ref=f33e299]
+                      - generic "#131313" [ref=f33e300]
+                    - generic [ref=f33e301]: rounded cards
+                    - generic [ref=f33e302]: soft shadows
+                    - generic [ref=f33e303]: sky-blue accent
+                  - paragraph [ref=f33e304]:
+                    - generic [ref=f33e305]: Risk
+                    - text: Looks like most chat products by design.
+                  - button "Play it straight" [ref=f33e306] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Modern standard
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: Headline and join-by-code on the left, a chat window running the demo on the right, stats and feature cards below.
+                  - paragraph:
+                    - generic: Risk
+                    - text: Looks like most chat products by design.
+                  - button "Play it straight"
+        - button "Previous card" [disabled] [ref=f33e307]
+        - button "Next card" [ref=f33e310] [cursor=pointer]
+  - contentinfo [ref=f33e313]:
+    - 'textbox "Optional steer: what should be different or kept?" [ref=f33e314]'
+    - button "← Safer hand" [ref=f33e315] [cursor=pointer]
+    - button "Re-roll" [ref=f33e317] [cursor=pointer]
+    - button "Bolder hand →" [ref=f33e326] [cursor=pointer]

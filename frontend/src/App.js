@@ -44,7 +44,7 @@ function App() {
           </Routes>
         </BrowserRouter>
       </AuthContext.Provider>
-      <Toaster position="top-right" closeButton />
+      <Toaster position="bottom-right" closeButton mobileOffset={{ bottom: "88px" }} />
     </div>
   );
 }

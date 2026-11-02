@@ -61,15 +61,22 @@ export default function Register() {
     ) : null;
 
   return (
-    <div className="grid min-h-screen bg-paper lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-      {/* Left: the form */}
-      <div className="relative flex items-center justify-center px-6 py-16">
-        <ThemeToggle className="absolute right-4 top-4 lg:hidden" />
-        <div className="sheet-raised w-full max-w-lg p-8 sm:p-10">
-          <div className="mb-10">
-            <Logo />
-          </div>
-          <h1 className="text-[56px] text-ink">Create your account</h1>
+    <div className="fibre flex min-h-screen flex-col bg-paper">
+      {/* A strip of copy paper along the top: the way home, the theme switch, the way to log in */}
+      <div className="px-4 pt-4 sm:px-6 lg:px-12">
+        <nav className="sheet mx-auto flex w-full max-w-[1312px] items-center gap-3 px-4 py-2">
+          <Link to="/" aria-label="RoomChat home"><Logo size="sm" /></Link>
+          <ThemeToggle className="ml-auto" />
+          <Link to="/login" state={location.state} className="hidden h-10 items-center px-3 text-[15px] text-ink hover:bg-paper-4 sm:flex">
+            Have an account? Log in
+          </Link>
+        </nav>
+      </div>
+
+      <main className="mx-auto grid w-full max-w-[1312px] flex-1 items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:px-12">
+        {/* Left: the form, on a raised sheet taped to the board */}
+        <div className="sheet-raised tape mx-auto w-full max-w-lg px-8 pb-9 pt-10 sm:px-10" style={{ transform: "rotate(-0.5deg)" }}>
+          <h1 className="text-[clamp(3.5rem,3vw+1.5rem,4.5rem)] text-ink">Create your account</h1>
           <p className="mt-2 text-ink-3">Start creating and joining rooms in seconds.</p>
 
           <form onSubmit={handleRegister} className="mt-8 space-y-5" data-testid="register-form">
@@ -143,8 +150,8 @@ export default function Register() {
             {/* Password guidance: one line per rule, a check when it is met */}
             <ul className="space-y-1.5 text-sm" aria-label="Password rules">
               {rules.map((r) => (
-                <li key={r.label} className={`flex items-center gap-2 ${r.ok ? "text-ink" : "text-ink-3"}`}>
-                  {r.ok ? <Check size={15} className="text-success" aria-hidden="true" /> : <X size={15} aria-hidden="true" />}
+                <li key={r.label} className={`flex items-center gap-2 transition-colors ${r.ok ? "text-ink" : "text-ink-3"}`}>
+                  {r.ok ? <Check size={15} className="rc-pop text-success" aria-hidden="true" /> : <X size={15} aria-hidden="true" />}
                   {r.label}
                 </li>
               ))}
@@ -169,25 +176,26 @@ export default function Register() {
             </Link>
           </p>
         </div>
-      </div>
 
-      {/* Right: a quiet ruled column; the sample code is set as the measurement it is */}
-      <aside className="relative hidden flex-col justify-between bg-paper-2 p-12 lg:flex">
-        <ThemeToggle className="self-end" />
-        <div className="max-w-md">
-          <h2 className="text-[64px] text-ink">One code away from every conversation.</h2>
-          <p className="mt-4 text-lg text-ink">
-            Rooms of 2 to 100 people. Invite friends, hand off ownership, keep it private, all
-            with a warm, familiar feel.
-          </p>
-          {/* The sample code on the fluorescent sheet, pasted on at a tilt */}
-          <div className="sheet-fluoro mt-12 inline-block -rotate-2 px-7 py-5">
-            <p className="text-sm font-medium">Sample room code</p>
-            <p className="code-figure mt-1 text-[72px]">DSN9Q2</p>
+        {/* Right: what an account gets you, with a sample code on the fluorescent sheet */}
+        <aside className="relative hidden pb-16 lg:block">
+          <div className="sheet pin px-8 pb-8 pt-11" style={{ transform: "rotate(1.2deg)" }}>
+            <h2 className="text-[clamp(3.5rem,3vw+1.5rem,5rem)] text-ink">One code away from every conversation.</h2>
+            <p className="mt-4 text-lg text-ink">
+              Rooms of 2 to 100 people. Invite friends, hand off ownership, keep it private.
+            </p>
+            <ul className="mt-6 space-y-1 font-mono text-xs text-ink-3">
+              <li>room_code · 6 × [A-Z0-9]</li>
+              <li>passwords · PBKDF2-SHA256, 1.2M iterations</li>
+              <li>rooms delete themselves when the last member leaves</li>
+            </ul>
           </div>
-        </div>
-        <p className="text-sm text-ink">© 2026 RoomChat</p>
-      </aside>
+          <div className="sheet-fluoro rc-sway absolute -bottom-2 right-8 px-7 py-4" style={{ "--rest": "rotate(-3deg)", transform: "rotate(-3deg)" }}>
+            <p className="text-sm font-medium">Sample room code</p>
+            <p className="code-figure text-[64px]">DSN9Q2</p>
+          </div>
+        </aside>
+      </main>
     </div>
   );
 }

@@ -1,14 +1,15 @@
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, toast } from "sonner"
+import { useMode } from "@/hooks/useMode"
 
+/** Toasts as raised copy-paper sheets; sonner's own light/dark follows the app's theme switch. */
 const Toaster = ({
   ...props
 }) => {
-  const { theme = "system" } = useTheme()
+  const mode = useMode()
 
   return (
     <Sonner
-      theme={theme}
+      theme={mode === "light" ? "light" : "dark"}
       className="toaster group"
       toastOptions={{
         classNames: {

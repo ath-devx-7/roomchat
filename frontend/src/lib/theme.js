@@ -1,14 +1,15 @@
-// Light/dark mode. The choice lives on <html data-mode="light|dark"> and in localStorage
-// under "roomchat-mode". With nothing stored, tokens.css follows the OS setting instead.
-// templates/index.html applies the stored choice before first paint, so there is no flash.
+// Light / dark / black mode. The choice lives on <html data-mode="light|dark|black"> and in
+// localStorage under "roomchat-mode". With nothing stored, tokens.css follows the OS setting
+// (dark OS → dark board, otherwise light). templates/index.html applies the stored choice before
+// first paint, so there is no flash.
 
 const KEY = "roomchat-mode";
+export const MODES = ["light", "dark", "black"];
 
-/** The mode on screen right now: the stored choice, else what the OS prefers. Light (the
- *  kraft board) is the default, so only an explicit OS dark preference means dark. */
+/** The mode on screen right now: the stored choice, else what the OS prefers. */
 export function currentMode() {
   const set = document.documentElement.dataset.mode;
-  if (set === "light" || set === "dark") return set;
+  if (MODES.includes(set)) return set;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 

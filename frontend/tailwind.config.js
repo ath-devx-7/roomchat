@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
-// Every colour, font and size below is a var() of a token in src/tokens.css (the Paste-up theme),
-// so the light/dark switch changes the variables and every utility follows.
+// Every colour, font and size below is a var() of a token in src/tokens.css (Paste-up Night),
+// so the light/dark/black switch changes the variables and every utility follows.
 module.exports = {
     darkMode: ["class"],
     content: ["./src/**/*.{js,jsx,ts,tsx}", "./public/index.html"],
@@ -37,6 +37,7 @@ module.exports = {
             fontFamily: {
                 sans: ["var(--font-body)"],
                 display: ["var(--font-display)"],
+                mono: ["var(--font-mono)"],
             },
             fontSize: {
                 display: ["var(--text-display)", { lineHeight: "1.02" }],
@@ -52,6 +53,7 @@ module.exports = {
                     DEFAULT: "var(--color-paper)",
                     2: "var(--color-paper-2)",
                     3: "var(--color-paper-3)",
+                    4: "var(--color-paper-4)",
                 },
                 ink: {
                     DEFAULT: "var(--color-ink)",
@@ -69,6 +71,9 @@ module.exports = {
                     2: "var(--color-accent-2)",
                 },
                 own: "var(--color-own)",
+                // Yellow tape strips and the tape lines that join pinned cards.
+                tape: "var(--color-tape)",
+                line: "var(--color-line)",
                 offset: "var(--color-offset)",
                 // Coloured copy paper for rooms and people (lib/format.js paperFor).
                 room: {

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ArrowLeft, Copy, Check, Send, Reply, Pencil, Trash2, MoreVertical,
-  Crown, UserPlus, UserMinus, Settings, X, Lock, LogOut,
+  Crown, UserPlus, UserMinus, Settings, X, Lock, LogOut, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -46,6 +46,9 @@ export default function ChatRoom() {
   // The member who joined a moment ago, so their row can flash once.
   const [justJoined, setJustJoined] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  // Search through the loaded history (browser-only: it never asks the server).
+  const [query, setQuery] = useState("");
+  const [matchIndex, setMatchIndex] = useState(0);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   // Set when we are already on our way out, so the socket closing does not also fire a
@@ -318,154 +321,199 @@ export default function ChatRoom() {
     [friends, members]
   );
 
+  // Search: which loaded messages contain the query (case-insensitive, deleted ones excluded).
+  const needle = query.trim().toLowerCase();
+  const matchIds = needle ? messages.filter((m) => !m.deleted && m.text.toLowerCase().includes(needle)).map((m) => m.id) : [];
+
+  /** Scrolls the message list to the next match (Enter in the search box), wrapping round. */
+  const jumpToMatch = () => {
+    if (matchIds.length === 0) return;
+    const next = matchIndex % matchIds.length;
+    scrollRef.current?.querySelector(`[data-testid="message-${matchIds[next]}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    setMatchIndex(next + 1);
+  };
+
   if (!room) {
     return (
-      <div className="grid h-screen place-items-center bg-paper">
-        <p className="text-ink-3" role="status">Opening room…</p>
+      <div className="fibre grid h-screen place-items-center bg-paper">
+        <div className="sheet pin px-8 pb-6 pt-10 text-center" style={{ transform: "rotate(-1deg)" }}>
+          <p className="code-figure text-5xl text-ink">{code}</p>
+          <p className="mt-2 text-ink-3" role="status">Opening room…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-paper">
-      {/* Header: the room, its code and its capacity, all as measurements */}
-      <header className="z-20 flex items-center justify-between gap-3 border-b border-rule bg-paper px-3 py-2.5 sm:px-6" data-testid="room-header">
-        <div className="flex min-w-0 items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={handleLeaveRoom} aria-label="Back to dashboard" data-testid="back-to-dashboard-button">
-            <ArrowLeft size={20} />
-          </Button>
-          <span
-            className="hidden h-11 w-11 shrink-0 place-items-center text-lg font-medium text-room-ink shadow-card sm:grid"
-            style={{ backgroundColor: paperFor(room.room_code) }}
-            aria-hidden="true"
-          >
-            {initial(room.name)}
-          </span>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="truncate text-[32px] text-ink">{room.name}</h1>
-              {room.is_protected && (
-                <Lock size={14} className="shrink-0 text-ink-3" aria-label="Password protected" />
-              )}
-            </div>
-            <p className="text-xs text-ink-3">
-              <span className="measure text-ink-2">{members.length}/{room.capacity}</span> members
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={copyCode}
-            className="hidden h-10 items-center gap-2 bg-paper-3 px-3 text-sm text-ink shadow-card transition-colors hover:bg-hover sm:flex"
-            aria-label={`Copy room code ${room.room_code}`}
-            data-testid="copy-room-code-button"
-          >
-            <span className="code-figure text-2xl">{room.room_code}</span>
-            {copied ? (
-              <span className="rc-pop flex items-center gap-1 text-sm font-medium" aria-live="polite">
-                <Check size={15} /> Copied
-              </span>
-            ) : (
-              <Copy size={15} />
-            )}
-          </button>
-
-          <ThemeToggle />
-
-          {/* Invite friend */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" data-testid="open-invite-dialog-button">
-                <UserPlus size={16} /> Invite
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md" data-testid="invite-friend-dialog">
-              <DialogHeader>
-                <DialogTitle>Invite a friend</DialogTitle>
-                <DialogDescription>Pull someone from your friends list into {room.name}.</DialogDescription>
-              </DialogHeader>
-              <ul className="rc-scroll mt-2 max-h-[50vh] overflow-y-auto border-t border-rule-2">
-                {invitableFriends.length === 0 && (
-                  <li className="py-8 text-sm text-ink-3">No friends left to invite.</li>
+    <div className="fibre flex h-dvh flex-col bg-paper">
+      {/* Header: a strip of copy paper with the room, its code, search and the room's controls */}
+      <div className="px-3 pt-3 sm:px-5">
+        <header className="sheet relative z-20 flex items-center justify-between gap-3 px-2.5 py-2 sm:px-4" data-testid="room-header">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={handleLeaveRoom} aria-label="Back to dashboard" data-testid="back-to-dashboard-button">
+              <ArrowLeft size={20} />
+            </Button>
+            <span
+              className="hidden h-11 w-11 shrink-0 place-items-center font-display text-2xl text-room-ink shadow-card sm:grid"
+              style={{ backgroundColor: paperFor(room.room_code) }}
+              aria-hidden="true"
+            >
+              {initial(room.name)}
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-[34px] text-ink">{room.name}</h1>
+                {room.is_protected && (
+                  <Lock size={14} className="shrink-0 text-ink-3" aria-label="Password protected" />
                 )}
-                {invitableFriends.map((f) => (
-                  <li key={f.user_id} className="flex items-center gap-3 border-b border-rule-2 py-2" data-testid={`invite-friend-row-${f.user_id}`}>
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback style={{ backgroundColor: paperFor(f.username) }}>{initial(f.username)}</AvatarFallback>
-                    </Avatar>
-                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{f.username}</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleInviteFriend(f)}
-                      disabled={Boolean(invited[f.user_id])}
-                      data-testid={`invite-friend-${f.user_id}`}
-                    >
-                      {invited[f.user_id] ? "Invited" : "Invite"}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </DialogContent>
-          </Dialog>
+              </div>
+              <p className="text-xs text-ink-3">
+                <span className="measure text-ink-2">{members.length}/{room.capacity}</span> members · <span className="rc-blink mb-px mr-0.5 inline-block h-1.5 w-1.5 rounded-full bg-success align-middle" aria-hidden="true" /> live
+              </p>
+            </div>
+          </div>
 
-          {/* Room menu (leave / owner controls) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Room menu" data-testid="room-settings-button">
-                <Settings size={20} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={copyCode}>
-                <Copy size={15} className="mr-2" /> Copy room code
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLeaveRoom} data-testid="leave-room-menu-item">
-                <LogOut size={15} className="mr-2" /> Leave room
-              </DropdownMenuItem>
-              {amOwner && (
-                <>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5 text-xs text-ink-3">Owner controls</div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button className="flex w-full items-center px-2 py-1.5 text-sm text-error transition-colors hover:bg-hover focus-visible:outline-offset-[-2px]" data-testid="delete-room-menu-item">
-                        <Trash2 size={15} className="mr-2" /> Delete room
-                      </button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this room?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This permanently removes “{room.name}” and its history for all {members.length} members. This can’t be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction className="bg-error text-error-ink hover:bg-error hover:opacity-90" onClick={handleDeleteRoom} data-testid="confirm-delete-room-button">
-                          Delete room
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
+          <div className="flex items-center gap-2">
+            {/* Search the loaded history: matches light up, Enter jumps to the next one */}
+            <label className="hidden h-10 w-56 items-center gap-2 border border-rule bg-paper px-2.5 focus-within:border-ink md:flex xl:w-72">
+              <Search size={15} className="shrink-0 text-ink-3" aria-hidden="true" />
+              <span className="visually-hidden">Search messages</span>
+              <input
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setMatchIndex(0); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); jumpToMatch(); }
+                  if (e.key === "Escape") setQuery("");
+                }}
+                placeholder="Search messages"
+                className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-ink-3 focus-visible:outline-none"
+                data-testid="search-messages-input"
+              />
+              {needle && (
+                <span className="measure shrink-0 font-mono text-xs text-ink-3" aria-live="polite" data-testid="search-match-count">
+                  {matchIds.length} {matchIds.length === 1 ? "match" : "matches"}
+                </span>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
+              {query && (
+                <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="grid h-6 w-6 place-items-center text-ink-3 hover:text-ink">
+                  <X size={14} />
+                </button>
+              )}
+            </label>
 
-      {/* Body */}
-      <div className="flex min-h-0 flex-1">
+            <button
+              onClick={copyCode}
+              className="hidden h-10 items-center gap-2 bg-signal px-3 text-sm text-signal-ink shadow-offset-xs transition-transform duration-micro hover:-translate-y-px active:translate-y-0.5 active:shadow-none sm:flex"
+              aria-label={`Copy room code ${room.room_code}`}
+              data-testid="copy-room-code-button"
+            >
+              <span className="code-figure text-2xl">{room.room_code}</span>
+              {copied ? (
+                <span className="rc-pop flex items-center gap-1 text-sm font-medium" aria-live="polite">
+                  <Check size={15} /> Copied
+                </span>
+              ) : (
+                <Copy size={15} />
+              )}
+            </button>
+
+            <ThemeToggle className="hidden lg:inline-flex" />
+
+            {/* Invite friend */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="open-invite-dialog-button">
+                  <UserPlus size={16} /> <span className="hidden sm:inline">Invite</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md" data-testid="invite-friend-dialog">
+                <DialogHeader>
+                  <DialogTitle>Invite a friend</DialogTitle>
+                  <DialogDescription>Pull someone from your friends list into {room.name}.</DialogDescription>
+                </DialogHeader>
+                <ul className="rc-scroll mt-2 max-h-[50vh] overflow-y-auto border-t border-rule-2">
+                  {invitableFriends.length === 0 && (
+                    <li className="py-8 text-sm text-ink-3">No friends left to invite.</li>
+                  )}
+                  {invitableFriends.map((f) => (
+                    <li key={f.user_id} className="flex items-center gap-3 border-b border-rule-2 py-2" data-testid={`invite-friend-row-${f.user_id}`}>
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback style={{ backgroundColor: paperFor(f.username) }}>{initial(f.username)}</AvatarFallback>
+                      </Avatar>
+                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{f.username}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleInviteFriend(f)}
+                        disabled={Boolean(invited[f.user_id])}
+                        data-testid={`invite-friend-${f.user_id}`}
+                      >
+                        {invited[f.user_id] ? "Invited" : "Invite"}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </DialogContent>
+            </Dialog>
+
+            {/* Room menu (leave / owner controls) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Room menu" data-testid="room-settings-button">
+                  <Settings size={20} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={copyCode}>
+                  <Copy size={15} className="mr-2" /> Copy room code
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLeaveRoom} data-testid="leave-room-menu-item">
+                  <LogOut size={15} className="mr-2" /> Leave room
+                </DropdownMenuItem>
+                {amOwner && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-xs text-ink-3">Owner controls</div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="flex w-full items-center px-2 py-1.5 text-sm text-error transition-colors hover:bg-hover focus-visible:outline-offset-[-2px]" data-testid="delete-room-menu-item">
+                          <Trash2 size={15} className="mr-2" /> Delete room
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this room?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This permanently removes “{room.name}” and its history for all {members.length} members. This can’t be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction className="bg-error text-error-ink hover:bg-error hover:opacity-90" onClick={handleDeleteRoom} data-testid="confirm-delete-room-button">
+                            Delete room
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+      </div>
+
+      {/* Body: the conversation on one large sheet, the members on a pinned sheet beside it */}
+      <div className="flex min-h-0 flex-1 gap-5 px-3 pb-3 pt-4 sm:px-5 sm:pb-5">
         {/* Messages */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div ref={scrollRef} className="rc-scroll flex-1 overflow-y-auto px-4 py-6 sm:px-8" data-testid="message-list">
+        <div className="sheet-raised flex min-w-0 flex-1 flex-col">
+          <div ref={scrollRef} className="rc-scroll fibre-bg flex-1 overflow-y-auto bg-paper-2 px-4 py-6 sm:px-8" data-testid="message-list">
             <div className="mx-auto max-w-3xl">
               {messages.length === 0 && (
-                <p className="py-10 text-center text-sm text-ink-3">
-                  No messages yet. Say hello.
-                </p>
+                <div className="mx-auto mt-10 w-fit px-6 py-5 text-center">
+                  <p className="code-figure text-6xl text-ink-3">{room.room_code}</p>
+                  <p className="mt-2 text-sm text-ink-3">No messages yet. Say hello.</p>
+                </div>
               )}
               {messages.map((msg, idx) => {
                 const prev = messages[idx - 1];
@@ -474,16 +522,17 @@ export default function ChatRoom() {
                 return (
                   <div key={msg.id}>
                     {newDay && (
-                      // Day divider: the label between two hairlines.
+                      // Day divider: the label on a strip of tape between two hairlines.
                       <div className="mb-4 mt-6 flex items-center gap-3 text-xs text-ink-3 first:mt-0">
                         <span className="h-px flex-1 bg-rule" />
-                        {dayLabel(msg.createdAt)}
+                        <span className="bg-tape px-2.5 py-0.5 font-mono text-ink">{dayLabel(msg.createdAt)}</span>
                         <span className="h-px flex-1 bg-rule" />
                       </div>
                     )}
                     <MessageRow
                       msg={msg}
                       grouped={grouped}
+                      needle={needle}
                       onReply={startReply}
                       onEdit={startEdit}
                       onDelete={handleDelete}
@@ -495,7 +544,7 @@ export default function ChatRoom() {
           </div>
 
           {/* Composer */}
-          <div className="border-t border-rule bg-paper px-4 py-3 sm:px-8">
+          <div className="border-t border-rule bg-paper-3 px-4 py-3 sm:px-8">
             <div className="mx-auto max-w-3xl">
               {(replyTo || editing) && (
                 // Replying or editing is the current state: it sits on the screen's one fluorescent sheet.
@@ -525,7 +574,7 @@ export default function ChatRoom() {
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Type a message…"
                   aria-label="Message"
-                  className="h-11 flex-1"
+                  className="h-11 flex-1 bg-paper"
                   data-testid="message-input"
                 />
                 <Button type="submit" size="icon" className="h-11 w-11 shrink-0" aria-label="Send message" data-testid="send-message-button">
@@ -536,16 +585,16 @@ export default function ChatRoom() {
           </div>
         </div>
 
-        {/* Members sidebar */}
-        <aside className="hidden w-72 shrink-0 flex-col bg-paper-3 shadow-card lg:flex" data-testid="members-sidebar">
-          <div className="border-b border-rule-2 px-5 py-4">
+        {/* Members: a pinned sheet */}
+        <aside className="sheet-raised pin hidden w-72 shrink-0 flex-col pt-6 lg:flex" style={{ transform: "rotate(0.4deg)" }} data-testid="members-sidebar">
+          <div className="border-b border-rule-2 px-5 pb-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-[28px] text-ink">Members</h2>
+              <h2 className="text-[30px] text-ink">Members</h2>
               <Badge className="measure" data-testid="member-count-badge">
                 {members.length}/{room.capacity}
               </Badge>
             </div>
-            <p className="mt-2 truncate text-xs text-ink-3" role="status" aria-live="polite" data-testid="presence-activity">
+            <p key={activity} className="rc-pop mt-2 truncate text-xs text-ink-3" role="status" aria-live="polite" data-testid="presence-activity">
               {activity}
             </p>
           </div>
@@ -602,15 +651,34 @@ export default function ChatRoom() {
   );
 }
 
+/** Splits `text` round case-insensitive matches of `needle` and marks them (search highlight). */
+function highlight(text, needle) {
+  if (!needle) return text;
+  const lower = text.toLowerCase();
+  const parts = [];
+  let from = 0;
+  let at = lower.indexOf(needle);
+  while (at !== -1) {
+    if (at > from) parts.push(text.slice(from, at));
+    parts.push(<mark key={at}>{text.slice(at, at + needle.length)}</mark>);
+    from = at + needle.length;
+    at = lower.indexOf(needle, from);
+  }
+  parts.push(text.slice(from));
+  return parts;
+}
+
 /** One chat message as a squared slip of paper: yours on the right on the "own" stock,
  *  everyone else's on the left with their paper-coloured initial tile. Grouped follow-ups
- *  drop the name and tile; messages that arrived live drop in. */
-function MessageRow({ msg, grouped, onReply, onEdit, onDelete }) {
+ *  drop the name and tile; messages that arrived live drop in. While searching, matches are
+ *  marked and other messages fade back. */
+function MessageRow({ msg, grouped, needle, onReply, onEdit, onDelete }) {
+  const isMatch = Boolean(needle) && !msg.deleted && msg.text.toLowerCase().includes(needle);
   // Bubble surface: deleted messages become a dashed outline with muted text.
   const surface = msg.deleted
     ? "border-dashed border-ink-3 bg-transparent text-ink-3"
     : msg.self
-      ? "border-transparent bg-own text-ink shadow-card"
+      ? "own-sheet border-transparent shadow-card"
       : "border-transparent bg-paper-3 text-ink shadow-card";
 
   const bubble = (
@@ -622,21 +690,24 @@ function MessageRow({ msg, grouped, onReply, onEdit, onDelete }) {
           <p className="truncate text-xs text-ink-3">{msg.replyTo.text}</p>
         </div>
       )}
-      <p className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed ${msg.deleted ? "italic" : ""}`}>{msg.text}</p>
+      <p className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed ${msg.deleted ? "italic" : ""}`}>{isMatch ? highlight(msg.text, needle) : msg.text}</p>
     </div>
   );
 
   // Time (local, a measurement) and the edited flag, side by side under the bubble.
   const meta = (
-    <span className={`mt-1 flex gap-2 text-xs text-ink-3 ${msg.self ? "mr-0.5" : "ml-0.5"}`}>
+    <span className={`mt-1 flex gap-2 font-mono text-[11px] text-ink-3 ${msg.self ? "mr-0.5" : "ml-0.5"}`}>
       <span className="measure">{clockTime(msg.createdAt)}</span>
       {msg.edited && <span>edited</span>}
     </span>
   );
 
+  // While searching, everything that doesn't match steps back.
+  const dim = needle && !isMatch ? "opacity-35" : "";
+
   if (msg.self) {
     return (
-      <div className={`group flex items-end justify-end gap-2 ${grouped ? "mt-1" : "mt-4"}`} data-testid={`message-${msg.id}`}>
+      <div className={`group flex items-end justify-end gap-2 transition-opacity ${grouped ? "mt-1" : "mt-4"} ${dim}`} data-testid={`message-${msg.id}`} data-match={isMatch || undefined}>
         {!msg.deleted && <MsgActions msg={msg} onReply={onReply} onEdit={onEdit} onDelete={onDelete} self />}
         <div className="flex max-w-[75%] flex-col items-end">
           {bubble}
@@ -646,7 +717,7 @@ function MessageRow({ msg, grouped, onReply, onEdit, onDelete }) {
     );
   }
   return (
-    <div className={`group flex items-end gap-2 ${grouped ? "mt-1" : "mt-4"}`} data-testid={`message-${msg.id}`}>
+    <div className={`group flex items-end gap-2 transition-opacity ${grouped ? "mt-1" : "mt-4"} ${dim}`} data-testid={`message-${msg.id}`} data-match={isMatch || undefined}>
       <div className="w-9 shrink-0 self-start">
         {!grouped && (
           <Avatar className="h-9 w-9">

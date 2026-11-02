@@ -48,20 +48,28 @@ export default function Login() {
   };
 
   return (
-    <div className="grid min-h-screen bg-paper lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      {/* Left: a quiet ruled column with the product's promise */}
-      <aside className="hidden flex-col justify-between bg-paper-2 p-12 lg:flex">
-        <Logo />
-        <div className="max-w-md">
-          <h2 className="text-[64px] text-ink">Your rooms are waiting.</h2>
-          <p className="mt-4 text-lg text-ink">
-            Pick up conversations right where you left them, with everyone in real time.
-          </p>
-          <ul className="mt-10 border-t border-rule">
+    <div className="fibre flex min-h-screen flex-col bg-paper">
+      {/* A strip of copy paper along the top: the way home, the theme switch, the way to sign up */}
+      <div className="px-4 pt-4 sm:px-6 lg:px-12">
+        <nav className="sheet mx-auto flex w-full max-w-[1312px] items-center gap-3 px-4 py-2">
+          <Link to="/" aria-label="RoomChat home"><Logo size="sm" /></Link>
+          <ThemeToggle className="ml-auto" />
+          <Link to="/register" state={location.state} className="hidden h-10 items-center px-3 text-[15px] text-ink hover:bg-paper-4 sm:flex">
+            New here? Sign up
+          </Link>
+        </nav>
+      </div>
+
+      <main className="mx-auto grid w-full max-w-[1312px] flex-1 items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:px-12">
+        {/* Left: the case for coming back, pinned at a tilt */}
+        <aside className="sheet pin hidden px-8 pb-8 pt-11 lg:block" style={{ transform: "rotate(-1.2deg)" }}>
+          <h2 className="text-[clamp(3.5rem,3vw+1.5rem,5rem)] text-ink">Your rooms are waiting.</h2>
+          <p className="mt-4 text-lg text-ink">Pick up where you left off, with everyone in real time.</p>
+          <ul className="mt-8 border-t border-rule">
             {[
-              { icon: Users, t: "Friends & presence in one glance" },
-              { icon: ShieldCheck, t: "Private, password-protected rooms" },
-              { icon: MessagesSquare, t: "Reply, edit and moderate with ease" },
+              { icon: Users, t: "Friends, and the room each one is in" },
+              { icon: ShieldCheck, t: "Private rooms behind a password" },
+              { icon: MessagesSquare, t: "Reply, edit and moderate, live" },
             ].map((it) => (
               <li key={it.t} className="flex items-center gap-3 border-b border-rule py-3.5 text-ink">
                 <it.icon size={17} className="shrink-0" aria-hidden="true" />
@@ -69,19 +77,18 @@ export default function Login() {
               </li>
             ))}
           </ul>
-        </div>
-        <p className="text-sm text-ink">© 2026 RoomChat</p>
-      </aside>
+          <p className="mt-6 font-mono text-xs text-ink-3">One sessionid cookie signs you in to the API and both WebSockets.</p>
+        </aside>
 
-      {/* Right: the form */}
-      <div className="relative flex items-center justify-center px-6 py-16">
-        <ThemeToggle className="absolute right-4 top-4" />
-        <div className="sheet-raised w-full max-w-md p-8 sm:p-10">
-          <div className="mb-10 lg:hidden">
-            <Logo />
-          </div>
-          <h1 className="text-[56px] text-ink">Log in</h1>
+        {/* Right: the form, on a raised sheet taped to the board */}
+        <div className="sheet-raised tape mx-auto w-full max-w-md px-8 pb-9 pt-10 sm:px-10" style={{ transform: "rotate(0.6deg)" }}>
+          <h1 className="text-[clamp(3.5rem,3vw+1.5rem,4.5rem)] text-ink">Log in</h1>
           <p className="mt-2 text-ink-3">Enter your details to continue.</p>
+          {presetCode && (
+            <p className="sheet-fluoro rc-pop mt-5 px-3 py-2 text-sm">
+              Then on to room <span className="code-figure text-xl">{presetCode}</span>
+            </p>
+          )}
 
           <form onSubmit={handleLogin} className="mt-8 space-y-5" data-testid="login-form">
             <div className="space-y-2">
@@ -146,7 +153,7 @@ export default function Login() {
             </Link>
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

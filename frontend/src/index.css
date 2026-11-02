@@ -1,12 +1,6 @@
-/* Hallmark · shape: Bento Grid (/) + app screen (/login /register /dashboard /room) · genre: playful · theme: Paste-up (deal 2/3, seed friendly-real-time-room-chat-62db·edb5c6a6·2026-11-01·r0, by choice) · redesign: full
- * hero: Stage (/) · nav: edge-aligned strip · footer: colophon · imagery: the product (a live recording and captures) · signature: the room code on a fluorescent sheet over a live room
- * axes: mid/display-condensed/chromatic-yellow · pasteup: kraft (light) + black wall (dark, sheets in grey paper) · modes: light+dark · posture: committed · contrast: pass · fold: pass · built: the project · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H5 E4 S4 R4 V4 · weakest: E (thin facts), carried by the product itself (a live recording, a working code box) and true product numbers as flyers */
-/* Hallmark · waive 8: the landing keeps the content it had plus the code box the owner asked for; no pricing or questions exist to build
- * waive pasteup-photo: the product captures stay in colour; the copier rule is for photographs, and these are screens of the app itself
- * waive pasteup-black-wall: dark-mode sheets are grey paper, not white, so one toner colour holds on every surface (dark-mode.md parity) */
-/* Fonts (League Gothic and Newsreader, from Google) are loaded by <link>s in templates/index.html
-   (and frontend/public/index.html for the dev server). An @import here would block the stylesheet. */
+/* Paste-up Night · layout: Evidence Board (landing) and static boards (app screens).
+ * Fonts (League Gothic, Newsreader, Geist Mono, from Google) are loaded by <link>s in templates/index.html
+ * (and frontend/public/index.html for the dev server). An @import here would block the stylesheet. */
 @import url("./tokens.css");
 @import url("./base.css");
 
@@ -14,8 +8,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* shadcn/ui reads these names; point them at the Paste-up tokens so the ui/ components follow
-   the theme and the light/dark switch. Popovers and cards are copy-paper sheets. */
+/* shadcn/ui reads these names; point them at the tokens so the ui/ components follow the theme
+   and the light/dark/black switch. Popovers and cards are copy-paper sheets. */
 :root {
     --background: var(--color-paper);
     --foreground: var(--color-ink);
@@ -51,14 +45,13 @@
         font-family: var(--font-body);
         line-height: 1.5;
     }
-    /* Poster heads: League Gothic capitals. Never under 28px, so small heads opt out
-       with font-sans normal-case (the Newsreader voice). */
+    /* Poster heads: League Gothic capitals. Small heads opt out with font-sans normal-case. */
     h1, h2 {
         font-family: var(--font-display);
         font-weight: var(--display-weight);
         text-transform: uppercase;
         letter-spacing: var(--tracking-display);
-        line-height: 1;
+        line-height: 0.95;
         overflow-wrap: break-word;
         min-width: 0;
     }
@@ -70,9 +63,18 @@
         font-weight: 500;
         line-height: 1.2;
     }
+    /* Search matches inside loaded messages (ChatRoom). */
+    mark {
+        background: var(--color-accent);
+        color: var(--color-accent-ink);
+        padding: 0 2px;
+    }
 }
 
-/* Scrollbars inside panels (message list, friends list) */
+/* ---------- Browser surfaces, themed ---------- */
+html {
+    scrollbar-color: var(--color-rule) var(--color-paper);
+}
 .rc-scroll::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -96,6 +98,7 @@
     line-height: 0.95;
 }
 
+/* ---------- Materials ---------- */
 /* Paper lifts, not boxes: a copy sheet on the board, and a raised sheet. */
 .sheet {
     background: var(--color-paper-3);
@@ -105,6 +108,22 @@
     background: var(--color-paper-3);
     box-shadow: var(--shadow-sheet);
 }
+/* Your own chat messages: yellow-tinted copy paper with toner type in every theme. The ink
+   tokens are reset inside it so quotes, names and times stay readable on the light paper. */
+.own-sheet {
+    --color-ink: #17140f;
+    --color-ink-2: #2b2620;
+    --color-muted: #4d463c;
+    background: var(--color-own);
+    color: var(--color-ink);
+}
+
+/* A fainter fibre as a plain background, for scrolling reading panels (a ::before would scroll away). */
+.fibre-bg {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02 0.03' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.3 0 0 0 0.1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+    background-blend-mode: var(--fibre-blend);
+}
+
 /* The one fluorescent sheet a screen, with toner type. */
 .sheet-fluoro {
     background: var(--color-accent);
@@ -112,7 +131,7 @@
     box-shadow: var(--shadow-sheet);
 }
 
-/* The fibre wash on a kraft band: a low-frequency tan tint, never under running text. */
+/* The fibre wash on a board band: a low-frequency tint, never under running text. */
 .fibre {
     position: relative;
     isolation: isolate;
@@ -122,50 +141,150 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    opacity: 0.5;
-    mix-blend-mode: multiply;
+    opacity: var(--fibre-opacity);
+    mix-blend-mode: var(--fibre-blend);
     pointer-events: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02 0.03' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.3 0 0 0 0.28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
-}
-[data-mode="dark"] .fibre::before {
-    opacity: 0.35;
-    mix-blend-mode: screen;
-}
-@media (prefers-color-scheme: dark) {
-    :root:not([data-mode]) .fibre::before {
-        opacity: 0.35;
-        mix-blend-mode: screen;
-    }
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02 0.03' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.3 0 0 0 0.28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
 }
 
-/* Captures come in two boards; show the one that matches the mode on screen.
-   Same rule as tokens.css: a stored choice wins, else the OS setting. Kraft is the default. */
-.rc-dark-only {
-    display: none;
+/* A strip of yellow tape across the top edge of a sheet. */
+.tape {
+    position: relative;
 }
-[data-mode="dark"] .rc-dark-only {
-    display: block;
-}
-[data-mode="dark"] .rc-light-only {
-    display: none;
-}
-@media (prefers-color-scheme: dark) {
-    :root:not([data-mode]) .rc-dark-only {
-        display: block;
-    }
-    :root:not([data-mode]) .rc-light-only {
-        display: none;
-    }
+.tape::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -11px;
+    width: 72px;
+    height: 22px;
+    transform: translateX(-50%) rotate(-3deg);
+    background: var(--color-tape);
+    z-index: 2;
 }
 
-/* Micro-interactions, paper physics only. base.css also collapses every animation under
-   reduced motion; these say so explicitly. */
+/* A yellow pushpin at the top of a pinned card. */
+.pin {
+    position: relative;
+}
+.pin::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 7px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    background: var(--color-accent);
+    box-shadow: 0 2px 0 var(--color-offset), inset -2px -2px 0 rgb(0 0 0 / 0.2);
+    z-index: 3;
+}
+
+/* On narrow screens a board stacks its cards; their board positions (inline left/top) no longer apply. */
+[data-board][data-stacked] > [data-pin] {
+    left: auto !important;
+    top: auto !important;
+}
+
+/* A rubber stamp: condensed capitals in a ruled box, inked in the error colour. */
+.stamp {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border: 3px solid currentColor;
+    color: var(--color-error);
+    transform: rotate(-6deg);
+    line-height: 1.1;
+}
+
+/* A small technical sticker pasted on the board. */
+.sticker {
+    position: absolute;
+    z-index: 3;
+    font: 500 12px var(--font-mono);
+    padding: 6px 10px;
+    background: var(--color-paper-4);
+    color: var(--color-ink);
+    box-shadow: 2px 2px 0 var(--color-offset);
+    white-space: nowrap;
+    pointer-events: none;
+}
+.sticker-fluoro {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+}
+.sticker-outline {
+    background: none;
+    border: 1.5px solid var(--color-muted);
+    color: var(--color-muted);
+    box-shadow: none;
+}
+
+/* The torn receipt edge under a frames log. */
+.receipt-edge {
+    position: relative;
+}
+.receipt-edge::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -10px;
+    height: 12px;
+    background: radial-gradient(circle at 8px 0, transparent 7px, var(--color-paper-3) 8px) 0 0 / 16px 12px;
+}
+
+/* ---------- Motion: paper physics. All of it stops under reduced motion. ---------- */
+
+/* A sheet drops onto the board when it scrolls into view (hooks/useReveal adds .is-in). */
+@keyframes rc-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(-18px) rotate(-1.5deg);
+    }
+    to {
+        opacity: 1;
+        transform: var(--rest, none);
+    }
+}
+.reveal {
+    opacity: 0;
+}
+.reveal.is-in {
+    opacity: 1;
+    animation: rc-reveal 0.7s var(--ease-paper) both;
+    animation-delay: var(--d, 0s);
+}
+
+/* A stamp lands with a thunk. */
+@keyframes rc-thunk {
+    0% {
+        opacity: 0;
+        transform: scale(1.6) rotate(-14deg);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(0.94) rotate(-5deg);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(-6deg);
+    }
+}
+.stamp.reveal.is-in {
+    animation: rc-thunk 0.5s var(--ease-out) both;
+    animation-delay: var(--d, 0s);
+}
 
 /* A new chat message drops onto the board like a slip of paper. */
 @keyframes rc-drop {
     from {
         opacity: 0;
-        transform: translateY(-8px) rotate(-0.8deg);
+        transform: translateY(-10px) rotate(-1deg);
     }
     to {
         opacity: 1;
@@ -173,17 +292,18 @@
     }
 }
 .rc-drop {
-    animation: rc-drop var(--dur-short) var(--ease-out) both;
+    animation: rc-drop 0.42s var(--ease-paper) both;
 }
 
-/* A member who just joined: a fluorescent edge flashes round their row, then settles. An
-   edge, not a fill, so the row's own text keeps its contrast on both boards. */
+/* A member who just joined: a fluorescent outline and tint flash round their row, then settle. */
 @keyframes rc-flash {
     from {
-        box-shadow: inset 0 0 0 2px var(--color-accent), inset 8px 0 0 var(--color-accent);
+        box-shadow: inset 0 0 0 2px var(--color-accent);
+        background-color: color-mix(in srgb, var(--color-accent) 22%, transparent);
     }
     to {
-        box-shadow: inset 0 0 0 2px transparent, inset 8px 0 0 transparent;
+        box-shadow: inset 0 0 0 2px transparent;
+        background-color: transparent;
     }
 }
 .rc-flash {
@@ -205,10 +325,130 @@
     animation: rc-pop var(--dur-micro) var(--ease-out) both;
 }
 
+/* A gentle sway for the fluorescent code sheet. */
+@keyframes rc-sway {
+    50% {
+        transform: var(--rest, none) translateY(-6px) rotate(-1deg);
+    }
+}
+.rc-sway {
+    animation: rc-sway 6s ease-in-out infinite;
+}
+
+/* A slow blink for "live" dots. */
+@keyframes rc-blink {
+    50% {
+        opacity: 0.25;
+    }
+}
+.rc-blink {
+    animation: rc-blink 1.2s steps(1) infinite;
+}
+
+/* A scrolling ticker: the content is doubled so -50% loops seamlessly. Pauses on hover. */
+@keyframes rc-marquee {
+    to {
+        transform: translateX(-50%);
+    }
+}
+.rc-marquee {
+    overflow: hidden;
+    white-space: nowrap;
+}
+.rc-marquee > div {
+    display: inline-flex;
+    gap: 40px;
+    padding-right: 40px;
+    animation: rc-marquee 40s linear infinite;
+}
+.rc-marquee:hover > div {
+    animation-play-state: paused;
+}
+
+/* Lines of a diagram draw themselves in when revealed. */
+.draw path {
+    stroke-dasharray: var(--len, 1000);
+    stroke-dashoffset: var(--len, 1000);
+    transition: stroke-dashoffset 1.6s var(--ease-in-out);
+}
+.draw.is-in path {
+    stroke-dashoffset: 0;
+}
+
+/* ---------- The tech board (landing): architecture, middleware, schema, codes ---------- */
+.arch-node rect {
+    fill: var(--color-paper-3);
+    stroke: var(--color-ink);
+    stroke-width: 1.5;
+    transition: fill 0.2s;
+}
+.arch-node text {
+    fill: var(--color-ink);
+    transition: fill 0.2s;
+}
+.arch-node.hot rect {
+    fill: var(--color-accent);
+}
+.arch-node .arch-sub {
+    fill: var(--color-muted);
+}
+.arch-node.hot text,
+.arch-node.hot .arch-sub {
+    fill: var(--color-accent-ink);
+}
+/* Edge labels sit on a halo of the sheet colour so the wires never run through the letters. */
+.arch-label text {
+    fill: var(--color-muted);
+    stroke: var(--color-paper-3);
+    stroke-width: 5px;
+    paint-order: stroke;
+}
+.arch-wire {
+    fill: none;
+    stroke: var(--color-muted);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 6;
+}
+.arch-wire.live {
+    stroke: var(--color-line);
+    stroke-dasharray: none;
+    stroke-width: 2;
+}
+.arch-packet {
+    fill: var(--color-accent);
+    stroke: var(--color-accent-ink);
+    stroke-width: 1;
+}
+.tape-lines line {
+    stroke: var(--color-line);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    opacity: 0.75;
+}
+.schema-lines path {
+    fill: none;
+    stroke: var(--color-line);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 5;
+    opacity: 0.8;
+}
+
 @media (prefers-reduced-motion: reduce) {
+    .reveal {
+        opacity: 1;
+    }
+    .reveal.is-in,
+    .stamp.reveal.is-in,
     .rc-drop,
     .rc-flash,
-    .rc-pop {
+    .rc-pop,
+    .rc-sway,
+    .rc-blink,
+    .rc-marquee > div {
         animation: none;
+    }
+    .draw path {
+        stroke-dashoffset: 0;
+        transition: none;
     }
 }

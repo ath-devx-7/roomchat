@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Logo, StatusDot } from "@/components/Brand";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -9,7 +9,6 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -28,13 +27,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Plus, LogIn, Lock, Users, UserPlus, Check, X,
-  MoreVertical, LogOut, Hash, UserMinus, Info, ChevronDown,
+  MoreVertical, LogOut, Hash, UserMinus, Info, ChevronDown, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/App";
 import { useSocket } from "@/lib/useSocket";
 import { fromNow, initial, paperFor } from "@/lib/format";
+import { useReveal } from "@/hooks/useReveal";
 
 let activitySeq = 0;
 const nextActivityId = () => `a_${++activitySeq}`;
@@ -68,9 +68,8 @@ export default function Dashboard() {
 
   // add friend
   const [friendQuery, setFriendQuery] = useState("");
-
-  // sidebar tab, controlled so the marker under it can slide
-  const [tab, setTab] = useState("friends");
+  // filter the friends list (browser-only: it searches the list already loaded)
+  const [friendFilter, setFriendFilter] = useState("");
 
   // A code typed on the landing page arrives as ?code=XXXXXX (via Login/Register): put it in
   // the join box, cleaned the same way the input cleans typing. The user still presses Join.
@@ -81,6 +80,10 @@ export default function Dashboard() {
   }, [params]);
 
   const unreadNotifs = notifs.filter((n) => n.unread).length;
+
+  // Sheets drop onto the board as the page opens (index.css .reveal).
+  const pageRef = useRef(null);
+  useReveal(pageRef);
 
   const load = useCallback(async () => {
     try {
@@ -329,20 +332,27 @@ export default function Dashboard() {
     navigate("/");
   };
 
+  // The friends list, narrowed by the search box (case-insensitive, on the loaded list only).
+  const needle = friendFilter.trim().toLowerCase();
+  const visibleFriends = needle ? friends.filter((f) => f.username.toLowerCase().includes(needle)) : friends;
+
   return (
-    <div className="min-h-screen bg-paper">
-      {/* Top bar: solid paper under a hairline, no glass */}
-      <header className="sticky top-0 z-30 border-b border-rule bg-paper" data-testid="dashboard-header">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-3 sm:px-6 lg:px-16">
+    <div ref={pageRef} className="fibre min-h-screen bg-paper">
+      {/* Top bar: a strip of copy paper pinned along the top, sticky while you scroll */}
+      <header className="sticky top-0 z-30 bg-paper px-4 pb-3 pt-4 sm:px-6 lg:px-12" data-testid="dashboard-header">
+        <div className="sheet mx-auto flex max-w-[1312px] items-center gap-3 px-4 py-2">
           <Logo size="sm" />
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="flex h-10 items-center gap-2 bg-paper-3 px-3 text-sm font-medium text-ink shadow-card transition-colors hover:bg-hover"
+                  className="flex h-10 items-center gap-2 bg-paper-4 px-3 text-sm font-medium text-ink shadow-card transition-colors hover:bg-hover"
                   data-testid="user-menu-trigger"
                 >
+                  <span className="grid h-6 w-6 place-items-center font-display text-base text-room-ink" style={{ backgroundColor: paperFor(user?.username) }} aria-hidden="true">
+                    {initial(user?.username)}
+                  </span>
                   {user?.username}
                   <ChevronDown size={16} className="text-ink-3" aria-hidden="true" />
                 </button>
@@ -366,21 +376,25 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-[1440px] gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-16 lg:py-12">
+      <main className="mx-auto grid max-w-[1312px] gap-10 px-4 pb-16 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-12">
         {/* Main column */}
         <div className="min-w-0 space-y-12">
-          <div>
-            <h1 className="text-[56px] text-ink">Hi, {user?.username}</h1>
-            <p className="mt-2 text-ink-3">Create a room or hop into one with a code.</p>
+          <div className="reveal">
+            <h1 className="text-[clamp(3.5rem,4vw+1rem,5.5rem)] text-ink">Hi, {user?.username}</h1>
+            <p className="mt-2 text-lg text-ink-3">
+              {invites.length + requests.length > 0
+                ? `${invites.length} invitation${invites.length === 1 ? "" : "s"} and ${requests.length} friend request${requests.length === 1 ? "" : "s"} waiting.`
+                : "Create a room or hop into one with a code."}
+            </p>
           </div>
 
-          {/* Join + Create: joining by code leads on a copy sheet; creating is the screen's one
-              fluorescent sheet, pasted on at a slight tilt. */}
+          {/* Join + Create: joining by code on a pinned sheet; creating is the screen's one
+              fluorescent sheet, pinned at a slight tilt. */}
           <section className="grid items-start gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
             {/* Join */}
-            <div className="sheet p-6 lg:p-8">
-              <h2 className="text-[40px] text-ink">Join a room</h2>
-              <p className="mt-1 text-sm text-ink-3">Enter a 6-character room code.</p>
+            <div className="reveal sheet-raised pin p-6 pt-10 lg:p-8 lg:pt-11" style={{ "--rest": "rotate(-0.8deg)" }}>
+              <h2 className="text-[44px] text-ink">Join a room</h2>
+              <p className="mt-1 text-ink-3">Enter a 6-character room code.</p>
               <form onSubmit={handleJoin} className="mt-6 space-y-4" data-testid="join-room-form">
                 <label htmlFor="join-code" className="visually-hidden">Room code</label>
                 <Input
@@ -391,7 +405,7 @@ export default function Dashboard() {
                   maxLength={6}
                   autoComplete="off"
                   spellCheck={false}
-                  className="code-figure h-20 max-w-[18rem] px-4 text-[56px]"
+                  className="code-figure h-20 max-w-[18rem] bg-paper px-4 text-[56px] shadow-offset-xs"
                   data-testid="join-code-input"
                 />
                 <label className="flex items-center gap-3 text-sm text-ink-2">
@@ -399,7 +413,7 @@ export default function Dashboard() {
                   This room has a password
                 </label>
                 {joinProtected && (
-                  <div className="max-w-[16rem] space-y-2">
+                  <div className="rc-pop max-w-[16rem] space-y-2">
                     <Label htmlFor="join-password">Room password</Label>
                     <Input
                       id="join-password"
@@ -411,20 +425,20 @@ export default function Dashboard() {
                   </div>
                 )}
                 <Button type="submit" disabled={joining} className="min-w-[10rem]" data-testid="join-room-button">
-                  {joining ? "Joining…" : "Join room"}
+                  <LogIn size={16} /> {joining ? "Joining…" : "Join room"}
                 </Button>
               </form>
             </div>
 
             {/* Create */}
-            <div className="sheet-fluoro flex flex-col justify-between gap-6 p-6 md:rotate-1 lg:p-8">
+            <div className="reveal sheet-fluoro pin flex flex-col justify-between gap-6 p-6 pt-10 lg:p-8 lg:pt-11" style={{ "--rest": "rotate(1.5deg)", "--d": "0.1s" }}>
               <div>
-                <h2 className="text-[40px]">Create a room</h2>
-                <p className="mt-1 text-sm">Spin up a space and invite people with a code.</p>
-                <ul className="mt-6 space-y-2 text-sm">
+                <h2 className="text-[44px]">Create a room</h2>
+                <p className="mt-1">Spin up a space and invite people with a code.</p>
+                <ul className="mt-6 space-y-2 text-[15px]">
                   <li className="flex items-center gap-2"><Users size={15} aria-hidden="true" /><span><span className="measure">2</span> to <span className="measure">100</span> members</span></li>
                   <li className="flex items-center gap-2"><Lock size={15} aria-hidden="true" /> Optional password</li>
-                  <li className="flex items-center gap-2"><Hash size={15} aria-hidden="true" /> Shareable code</li>
+                  <li className="flex items-center gap-2"><Hash size={15} aria-hidden="true" /> Shareable 6-character code</li>
                 </ul>
               </div>
               <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -435,7 +449,7 @@ export default function Dashboard() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md" data-testid="create-room-dialog">
                   <DialogHeader>
-                    <DialogTitle className="font-display text-[40px] font-normal uppercase leading-none">Create a room</DialogTitle>
+                    <DialogTitle className="text-[44px]">Create a room</DialogTitle>
                     <DialogDescription>Set up your space and invite people with a code.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-6 py-2">
@@ -458,7 +472,7 @@ export default function Dashboard() {
                       <Switch id="create-room-protect" checked={roomProtected} onCheckedChange={setRoomProtected} data-testid="create-room-protect-switch" />
                     </div>
                     {roomProtected && (
-                      <div className="space-y-2">
+                      <div className="rc-pop space-y-2">
                         <Label htmlFor="create-room-password">Room password</Label>
                         <Input
                           id="create-room-password"
@@ -473,7 +487,7 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between">
                         <Label id="create-room-capacity-label">Capacity</Label>
                         <span className="text-sm text-ink-2" data-testid="capacity-value">
-                          <span className="measure font-medium text-ink">{capacity}</span> members
+                          <span className="measure code-figure text-2xl text-ink">{capacity}</span> members
                         </span>
                       </div>
                       <Slider
@@ -485,7 +499,7 @@ export default function Dashboard() {
                         aria-labelledby="create-room-capacity-label"
                         data-testid="create-room-capacity-slider"
                       />
-                      <div className="measure flex justify-between text-xs text-ink-3">
+                      <div className="measure flex justify-between font-mono text-xs text-ink-3">
                         <span>2</span><span>100</span>
                       </div>
                     </div>
@@ -505,11 +519,15 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Room invitations */}
-          <section>
-            <div className="flex items-baseline justify-between gap-4 border-b border-rule pb-3">
-              <h2 className="text-[40px] text-ink">Room invitations</h2>
-              <span className="text-sm text-ink-3"><span className="measure">{invites.length}</span> pending</span>
+          {/* Room invitations: a taped sheet; the stamp counts what's pending */}
+          <section className="reveal sheet tape relative px-6 pb-6 pt-8" style={{ "--d": "0.15s" }}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <h2 className="text-[44px] text-ink">Room invitations</h2>
+              {invites.length > 0 && (
+                <span key={invites.length} className="stamp reveal is-in" aria-label={`${invites.length} pending`}>
+                  <span className="measure">{invites.length}</span> pending
+                </span>
+              )}
             </div>
             <p className="mt-3 flex items-center gap-2 text-sm text-ink-3">
               <Info size={15} className="shrink-0" aria-hidden="true" />
@@ -517,12 +535,12 @@ export default function Dashboard() {
             </p>
 
             {invites.length === 0 ? (
-              <div className="sheet mt-6 px-6 py-10" data-testid="no-invitations">
+              <div className="mt-6 border border-dashed border-rule px-6 py-10" data-testid="no-invitations">
                 <p className="font-medium text-ink-2">No invitations right now</p>
                 <p className="mt-1 text-sm text-ink-3">When a friend invites you to their room, it shows up here.</p>
               </div>
             ) : (
-              <ul className="sheet mt-6 px-5">
+              <ul className="mt-4">
                 {invites.map((inv) => (
                   <InvitationCard
                     key={inv.id}
@@ -535,33 +553,31 @@ export default function Dashboard() {
               </ul>
             )}
           </section>
+
+          {/* How rooms work: four true facts, so a quiet board still says something useful */}
+          <section className="reveal sheet pin px-6 pb-6 pt-10" style={{ "--rest": "rotate(0.5deg)", "--d": "0.25s" }} data-testid="room-tips">
+            <h2 className="text-[44px] text-ink">How rooms work</h2>
+            <ul className="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+              {[
+                ["One room at a time", "Joining a room leaves the one you're in."],
+                ["Rooms vanish when empty", "When the last member leaves, the room is deleted with its messages."],
+                ["A kick is a ban", "Someone the owner kicks can't rejoin that room while it exists."],
+                ["Invites skip the password", "An accepted invitation lets a friend in once, even into a locked room."],
+              ].map(([title, text]) => (
+                <li key={title} className="border-t border-rule pt-3">
+                  <p className="font-display text-[26px] uppercase leading-tight text-ink">{title}</p>
+                  <p className="mt-1 text-[15px] text-ink-3">{text}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
 
-        {/* Sidebar: one ruled panel; rows inside are parted by hairlines, never boxed again */}
-        <aside className="min-w-0">
-          <div className="sheet sticky top-24">
-            <Tabs value={tab} onValueChange={setTab}>
-              <TabsList className="relative grid w-full grid-cols-2">
-                {/* The marker under the current tab, moved by transform (never width) */}
-                <span
-                  aria-hidden="true"
-                  className={`absolute bottom-0 left-0 h-0.5 w-1/2 bg-ink transition-transform duration-short ease-out ${tab === "notifs" ? "translate-x-full" : ""}`}
-                />
-                <TabsTrigger value="friends" className="data-[state=active]:shadow-none" data-testid="tab-friends">
-                  Friends
-                </TabsTrigger>
-                <TabsTrigger value="notifs" className="data-[state=active]:shadow-none" data-testid="tab-notifications">
-                  Activity
-                  {unreadNotifs > 0 && (
-                    <span className="measure ml-2 grid h-5 min-w-5 place-items-center bg-signal px-1 text-xs text-signal-ink">
-                      {unreadNotifs}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Friends */}
-              <TabsContent value="friends" className="mt-0 p-4">
+        {/* Sidebar: Friends and Activity as two pinned sheets, both always in view */}
+        <aside className="min-w-0 space-y-10">
+          <section className="reveal sheet-raised pin px-4 pb-4 pt-9" style={{ "--rest": "rotate(0.6deg)", "--d": "0.2s" }} data-testid="friends-panel">
+            <h2 className="text-[34px] text-ink">Friends</h2>
+            <div className="mt-3">
                 <div className="flex gap-2">
                   <Input
                     value={friendQuery}
@@ -590,7 +606,7 @@ export default function Dashboard() {
                     </h3>
                     <ul className="mt-2 border-t border-rule-2">
                       {requests.map((u) => (
-                        <li key={u.id} className="flex items-center gap-3 border-b border-rule-2 py-2.5" data-testid={`friend-request-${u.id}`}>
+                        <li key={u.id} className="rc-drop flex items-center gap-3 border-b border-rule-2 py-2.5" data-testid={`friend-request-${u.id}`}>
                           <Avatar className="h-9 w-9">
                             <AvatarFallback style={{ backgroundColor: paperFor(u.sender_username) }}>{initial(u.sender_username)}</AvatarFallback>
                           </Avatar>
@@ -624,22 +640,46 @@ export default function Dashboard() {
                 )}
 
                 <div className="mt-6">
-                  <h3 className="text-sm font-medium tracking-normal text-ink-3">
-                    Friends <span className="measure">{friends.length}</span>
-                  </h3>
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-medium tracking-normal text-ink-3">
+                      Friends <span className="measure">{needle ? `${visibleFriends.length} of ${friends.length}` : friends.length}</span>
+                    </h3>
+                  </div>
+                  {friends.length > 0 && (
+                    <label className="mt-2 flex h-9 items-center gap-2 border border-rule bg-paper px-2.5 focus-within:border-ink">
+                      <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+                      <span className="visually-hidden">Search friends</span>
+                      <input
+                        value={friendFilter}
+                        onChange={(e) => setFriendFilter(e.target.value)}
+                        onKeyDown={(e) => e.key === "Escape" && setFriendFilter("")}
+                        placeholder="Search friends"
+                        className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-ink-3 focus-visible:outline-none"
+                        data-testid="search-friends-input"
+                      />
+                      {friendFilter && (
+                        <button type="button" onClick={() => setFriendFilter("")} aria-label="Clear search" className="grid h-6 w-6 place-items-center text-ink-3 hover:text-ink">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </label>
+                  )}
                   <ul className="rc-scroll mt-2 max-h-[42vh] overflow-y-auto border-t border-rule-2">
                     {friends.length === 0 && (
                       <li className="py-6 text-sm text-ink-3">
                         No friends yet. Add someone by username above.
                       </li>
                     )}
-                    {friends.map((u) => {
+                    {friends.length > 0 && visibleFriends.length === 0 && (
+                      <li className="py-6 text-sm text-ink-3">No friend matches “{friendFilter.trim()}”.</li>
+                    )}
+                    {visibleFriends.map((u) => {
                       // The backend's only presence signal is which room a friend is
                       // connected to right now (features.txt #4): "in a room" is the one
                       // thing we can state truthfully, so anything else reads as offline.
                       const inRoom = Boolean(u.current_room_code);
                       return (
-                        <li key={u.friendship_id} className="flex items-center gap-3 border-b border-rule-2 py-2 transition-colors hover:bg-hover" data-testid={`friend-${u.friendship_id}`}>
+                        <li key={u.friendship_id} className="flex items-center gap-3 border-b border-rule-2 px-1 py-2 transition-colors hover:bg-hover" data-testid={`friend-${u.friendship_id}`}>
                           <div className="relative">
                             <Avatar className="h-9 w-9">
                               <AvatarFallback style={{ backgroundColor: paperFor(u.username) }}>{initial(u.username)}</AvatarFallback>
@@ -681,10 +721,19 @@ export default function Dashboard() {
                     })}
                   </ul>
                 </div>
-              </TabsContent>
+            </div>
+          </section>
 
-              {/* Notifications */}
-              <TabsContent value="notifs" className="mt-0 p-4" data-testid="notifications-panel">
+          <section className="reveal sheet-raised pin px-4 pb-4 pt-9" style={{ "--rest": "rotate(-0.8deg)", "--d": "0.3s" }} data-testid="notifications-panel">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[34px] text-ink">Activity</h2>
+              {unreadNotifs > 0 && (
+                <span className="measure rc-pop grid h-6 min-w-6 place-items-center bg-signal px-1.5 text-sm text-signal-ink" aria-label={`${unreadNotifs} unread`}>
+                  {unreadNotifs}
+                </span>
+              )}
+            </div>
+            <div className="mt-3">
                 {notifs.length === 0 ? (
                   <p className="py-10 text-sm text-ink-3">You’re all caught up.</p>
                 ) : (
@@ -692,7 +741,7 @@ export default function Dashboard() {
                     {notifs.map((n) => (
                       <li
                         key={n.id}
-                        className={`border-b border-rule-2 px-2 py-3 ${n.unread ? "bg-hover" : ""}`}
+                        className={`rc-drop border-b border-rule-2 px-2 py-3 ${n.unread ? "bg-hover" : ""}`}
                         data-testid={`notification-${n.id}`}
                       >
                         {n.type === "system" ? (
@@ -736,8 +785,14 @@ export default function Dashboard() {
                     ))}
                   </ul>
                 )}
-              </TabsContent>
-            </Tabs>
+            </div>
+          </section>
+
+          {/* A few tech stickers on the board under the sheets (wide screens only) */}
+          <div aria-hidden="true" className="relative hidden h-44 lg:block">
+            <span className="sticker sticker-fluoro left-4 top-2 rotate-[-4deg]">ws://…/ws/notifications/</span>
+            <span className="sticker left-24 top-16 rotate-[3deg]">friend_request_received</span>
+            <span className="sticker sticker-outline left-8 top-[7.5rem] rotate-[-2deg]">session['room_grant']</span>
           </div>
         </aside>
       </main>
@@ -751,9 +806,9 @@ function InvitationCard({ inv, busy, onAccept, onDecline }) {
   // members / capacity / online are not in any invitation payload yet (features.txt #1),
   // so the row shows only what the payload has instead of placeholder dashes.
   return (
-    <li className="flex flex-wrap items-center gap-4 border-b border-rule-2 py-4 last:border-b-0" data-testid={`room-invite-${inv.id}`}>
+    <li className="rc-drop flex flex-wrap items-center gap-4 border-b border-rule-2 py-4 last:border-b-0" data-testid={`room-invite-${inv.id}`}>
       <span
-        className="grid h-11 w-11 shrink-0 place-items-center text-lg font-medium text-room-ink"
+        className="grid h-11 w-11 shrink-0 place-items-center font-display text-2xl text-room-ink shadow-card"
         style={{ backgroundColor: paperFor(inv.room_code) }}
         aria-hidden="true"
       >
@@ -772,7 +827,7 @@ function InvitationCard({ inv, busy, onAccept, onDecline }) {
           <span className="font-medium text-ink-2">{inv.sender_username}</span> invited you {fromNow(inv.created_at)}
         </p>
       </div>
-      <span className="code-figure text-2xl text-ink">{inv.room_code}</span>
+      <span className="code-figure bg-paper-4 px-2 text-2xl text-ink">{inv.room_code}</span>
 
       {/* No password field: an accepted invitation IS the key. room_detail_api consumes
           the invitation row and mints the session grant, which is exactly what a correct
