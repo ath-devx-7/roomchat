@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Brand";
+import ThemeToggle from "@/components/ThemeToggle";
 import { api } from "@/lib/api";
 import { useAuth } from "@/App";
 import { toast } from "sonner";
@@ -11,7 +12,12 @@ import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser } = useAuth();
+  // A room code typed on the landing page rides along in router state; after signing in it
+  // goes on to the dashboard as ?code=, where the join box picks it up.
+  const presetCode = location.state?.code;
+  const afterAuth = presetCode ? `/dashboard?code=${encodeURIComponent(presetCode)}` : "/dashboard";
   const [form, setForm] = useState({ username: "", email: "", password: "", confirm: "" });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,7 +46,7 @@ export default function Register() {
       });
       setUser(user);
       toast.success("Account created! Welcome to RoomChat.");
-      navigate("/dashboard", { replace: true });
+      navigate(afterAuth, { replace: true });
     } catch (err) {
       setErrors(err.fieldErrors || {});
       toast.error(err.message);
@@ -51,64 +57,74 @@ export default function Register() {
 
   const fieldError = (name) =>
     errors[name] ? (
-      <p className="text-sm font-semibold text-destructive">{errors[name]}</p>
+      <p className="text-sm text-error">{errors[name]}</p>
     ) : null;
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Left form */}
-      <div className="flex items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-md rc-fade-up">
-          <div className="mb-8 flex justify-center lg:justify-start">
-            <Logo />
-          </div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Create your account</h1>
-          <p className="mt-2 text-slate-500">Start creating and joining rooms in seconds.</p>
+    <div className="fibre flex min-h-screen flex-col bg-paper">
+      {/* A strip of copy paper along the top: the way home, the theme switch, the way to log in */}
+      <div className="px-4 pt-4 sm:px-6 lg:px-12">
+        <nav className="sheet mx-auto flex w-full max-w-[1312px] items-center gap-3 px-4 py-2">
+          <Link to="/" aria-label="RoomChat home"><Logo size="sm" /></Link>
+          <ThemeToggle className="ml-auto" />
+          <Link to="/login" state={location.state} className="hidden h-10 items-center px-3 text-[15px] text-ink hover:bg-paper-4 sm:flex">
+            Have an account? Log in
+          </Link>
+        </nav>
+      </div>
 
-          <form onSubmit={handleRegister} className="mt-7 space-y-4" data-testid="register-form">
+      <main className="mx-auto grid w-full max-w-[1312px] flex-1 items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:px-12">
+        {/* Left: the form, on a raised sheet taped to the board */}
+        <div className="sheet-raised tape mx-auto w-full max-w-lg px-8 pb-9 pt-10 sm:px-10" style={{ transform: "rotate(-0.5deg)" }}>
+          <h1 className="text-[clamp(3.5rem,3vw+1.5rem,4.5rem)] text-ink">Create your account</h1>
+          <p className="mt-2 text-ink-3">Start creating and joining rooms in seconds.</p>
+
+          <form onSubmit={handleRegister} className="mt-8 space-y-5" data-testid="register-form">
             <div className="space-y-2">
-              <Label htmlFor="username" className="font-bold text-slate-700">Username</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
                 value={form.username}
                 onChange={set("username")}
                 placeholder="alex_rivera"
+                autoComplete="username"
                 autoFocus
-                className="h-12 rounded-2xl border-slate-200 bg-white px-4 focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="h-11"
                 data-testid="register-username-input"
               />
               {fieldError("username")}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="font-bold text-slate-700">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={form.email}
                 onChange={set("email")}
                 placeholder="you@example.com"
-                className="h-12 rounded-2xl border-slate-200 bg-white px-4 focus-visible:ring-2 focus-visible:ring-primary/30"
+                autoComplete="email"
+                className="h-11"
                 data-testid="register-email-input"
               />
               {fieldError("email")}
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="password" className="font-bold text-slate-700">Password</Label>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPw ? "text" : "password"}
                     value={form.password}
                     onChange={set("password")}
-                    placeholder="••••••••"
-                    className="h-12 rounded-2xl border-slate-200 bg-white px-4 pr-11 focus-visible:ring-2 focus-visible:ring-primary/30"
+                    autoComplete="new-password"
+                    className="h-11 pr-12"
                     data-testid="register-password-input"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw((s) => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center text-ink-3 transition-colors hover:text-ink"
                     aria-label={showPw ? "Hide password" : "Show password"}
                   >
                     {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -117,71 +133,69 @@ export default function Register() {
                 {fieldError("password")}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm" className="font-bold text-slate-700">Confirm</Label>
+                <Label htmlFor="confirm">Confirm</Label>
                 <Input
                   id="confirm"
                   type={showPw ? "text" : "password"}
                   value={form.confirm}
                   onChange={set("confirm")}
-                  placeholder="••••••••"
-                  className="h-12 rounded-2xl border-slate-200 bg-white px-4 focus-visible:ring-2 focus-visible:ring-primary/30"
+                  autoComplete="new-password"
+                  className="h-11"
                   data-testid="register-confirm-input"
                 />
                 {fieldError("confirm_password")}
               </div>
             </div>
 
-            <div className="grid gap-2 rounded-2xl bg-secondary/60 p-4 sm:grid-cols-3">
+            {/* Password guidance: one line per rule, a check when it is met */}
+            <ul className="space-y-1.5 text-sm" aria-label="Password rules">
               {rules.map((r) => (
-                <div key={r.label} className="flex items-center gap-2 text-sm font-semibold">
-                  <span
-                    className={`grid h-5 w-5 place-items-center rounded-full ${
-                      r.ok ? "bg-green-500 text-white" : "bg-slate-200 text-slate-400"
-                    }`}
-                  >
-                    {r.ok ? <Check size={12} /> : <X size={12} />}
-                  </span>
-                  <span className={r.ok ? "text-slate-700" : "text-slate-400"}>{r.label}</span>
-                </div>
+                <li key={r.label} className={`flex items-center gap-2 transition-colors ${r.ok ? "text-ink" : "text-ink-3"}`}>
+                  {r.ok ? <Check size={15} className="rc-pop text-success" aria-hidden="true" /> : <X size={15} aria-hidden="true" />}
+                  {r.label}
+                </li>
               ))}
-            </div>
+            </ul>
 
             <Button
               type="submit"
+              size="lg"
               disabled={loading}
-              className="h-12 w-full rounded-full text-base font-bold shadow-floating transition-all hover:-translate-y-0.5"
+              className="w-full"
               data-testid="register-submit-button"
             >
-              {loading ? <Loader2 size={18} className="mr-2 animate-spin" /> : null}
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? <Loader2 size={18} className="animate-spin" /> : null}
+              {loading ? "Creating account…" : "Create account"}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-slate-500">
+          <p className="mt-8 text-ink-3">
             Already have an account?{" "}
-            <Link to="/login" className="font-bold text-primary hover:underline" data-testid="go-to-login-link">
+            <Link to="/login" state={location.state} className="font-medium text-ink underline underline-offset-4 hover:text-ink-2" data-testid="go-to-login-link">
               Log in
             </Link>
           </p>
         </div>
-      </div>
 
-      {/* Right brand panel */}
-      <div className="relative hidden flex-col justify-between bg-primary p-12 text-white lg:flex">
-        <div />
-        <div className="max-w-md">
-          <h2 className="text-4xl font-extrabold leading-tight">One code away from every conversation.</h2>
-          <p className="mt-4 text-lg text-white/80">
-            Rooms of 2 to 100 people. Invite friends, hand off ownership, keep it private — all
-            with a warm, familiar feel.
-          </p>
-          <div className="mt-10 rounded-3xl bg-white/10 p-6 backdrop-blur">
-            <p className="text-sm font-bold uppercase tracking-wide text-white/70">Sample room code</p>
-            <p className="mt-2 font-mono text-3xl font-extrabold tracking-[0.3em]">DSN9Q2</p>
+        {/* Right: what an account gets you, with a sample code on the fluorescent sheet */}
+        <aside className="relative hidden pb-16 lg:block">
+          <div className="sheet pin px-8 pb-8 pt-11" style={{ transform: "rotate(1.2deg)" }}>
+            <h2 className="text-[clamp(3.5rem,3vw+1.5rem,5rem)] text-ink">One code away from every conversation.</h2>
+            <p className="mt-4 text-lg text-ink">
+              Rooms of 2 to 100 people. Invite friends, hand off ownership, keep it private.
+            </p>
+            <ul className="mt-6 space-y-1 font-mono text-xs text-ink-3">
+              <li>room_code · 6 × [A-Z0-9]</li>
+              <li>passwords · PBKDF2-SHA256, 1.2M iterations</li>
+              <li>rooms delete themselves when the last member leaves</li>
+            </ul>
           </div>
-        </div>
-        <p className="text-sm text-white/60">© 2026 RoomChat</p>
-      </div>
+          <div className="sheet-fluoro rc-sway absolute -bottom-2 right-8 px-7 py-4" style={{ "--rest": "rotate(-3deg)", transform: "rotate(-3deg)" }}>
+            <p className="text-sm font-medium">Sample room code</p>
+            <p className="code-figure text-[64px]">DSN9Q2</p>
+          </div>
+        </aside>
+      </main>
     </div>
   );
 }

@@ -1,19 +1,20 @@
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, toast } from "sonner"
+import { useMode } from "@/hooks/useMode"
 
+/** Toasts as raised copy-paper sheets; sonner's own light/dark follows the app's theme switch. */
 const Toaster = ({
   ...props
 }) => {
-  const { theme = "system" } = useTheme()
+  const mode = useMode()
 
   return (
     <Sonner
-      theme={theme}
+      theme={mode === "light" ? "light" : "dark"}
       className="toaster group"
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+            "group toast group-[.toaster]:rounded-none group-[.toaster]:border-0 group-[.toaster]:bg-paper-3 group-[.toaster]:text-ink group-[.toaster]:font-sans group-[.toaster]:shadow-sheet",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",

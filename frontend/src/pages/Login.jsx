@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Brand";
+import ThemeToggle from "@/components/ThemeToggle";
 import { api } from "@/lib/api";
 import { useAuth } from "@/App";
 import { toast } from "sonner";
@@ -11,7 +12,12 @@ import { Eye, EyeOff, Loader2, MessagesSquare, ShieldCheck, Users } from "lucide
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser } = useAuth();
+  // A room code typed on the landing page rides along in router state; after signing in it
+  // goes on to the dashboard as ?code=, where the join box picks it up.
+  const presetCode = location.state?.code;
+  const afterAuth = presetCode ? `/dashboard?code=${encodeURIComponent(presetCode)}` : "/dashboard";
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -27,12 +33,12 @@ export default function Login() {
     setLoading(true);
     setErrors({});
     try {
-      // Sent as `username`: authenticate() is username-only. The label still offers
-      // email because signing in with one is a wanted feature — see features.txt #6.
+      // Sent as `username`: authenticate() is username-only, so the label says Username.
+      // Signing in with an email is a wanted feature (features.txt #6).
       const { user } = await api.login({ username: identifier, password });
       setUser(user);
       toast.success("Welcome back to RoomChat!");
-      navigate("/dashboard", { replace: true });
+      navigate(afterAuth, { replace: true });
     } catch (err) {
       setErrors(err.fieldErrors || {});
       toast.error(err.message);
@@ -42,87 +48,81 @@ export default function Login() {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Left brand panel */}
-      <div className="relative hidden flex-col justify-between bg-primary p-12 text-white lg:flex">
-        <Logo className="[&_span]:text-white [&_.text-primary]:text-white/90" />
-        <div className="max-w-md">
-          <h2 className="text-4xl font-extrabold leading-tight">Your rooms are waiting.</h2>
-          <p className="mt-4 text-lg text-white/80">
-            Pick up conversations right where you left them, with everyone in real time.
-          </p>
-          <div className="mt-10 space-y-4">
-            {[
-              { icon: Users, t: "Friends & presence in one glance" },
-              { icon: ShieldCheck, t: "Private, password-protected rooms" },
-              { icon: MessagesSquare, t: "Reply, edit and moderate with ease" },
-            ].map((it) => (
-              <div key={it.t} className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white/15">
-                  <it.icon size={18} />
-                </span>
-                <span className="font-semibold text-white/90">{it.t}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <p className="text-sm text-white/60">© 2026 RoomChat</p>
+    <div className="fibre flex min-h-screen flex-col bg-paper">
+      {/* A strip of copy paper along the top: the way home, the theme switch, the way to sign up */}
+      <div className="px-4 pt-4 sm:px-6 lg:px-12">
+        <nav className="sheet mx-auto flex w-full max-w-[1312px] items-center gap-3 px-4 py-2">
+          <Link to="/" aria-label="RoomChat home"><Logo size="sm" /></Link>
+          <ThemeToggle className="ml-auto" />
+          <Link to="/register" state={location.state} className="hidden h-10 items-center px-3 text-[15px] text-ink hover:bg-paper-4 sm:flex">
+            New here? Sign up
+          </Link>
+        </nav>
       </div>
 
-      {/* Right form */}
-      <div className="flex items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-md rc-fade-up">
-          <div className="lg:hidden mb-8 flex justify-center">
-            <Logo />
-          </div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Log in</h1>
-          <p className="mt-2 text-slate-500">Enter your details to continue.</p>
+      <main className="mx-auto grid w-full max-w-[1312px] flex-1 items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:px-12">
+        {/* Left: the case for coming back, pinned at a tilt */}
+        <aside className="sheet pin hidden px-8 pb-8 pt-11 lg:block" style={{ transform: "rotate(-1.2deg)" }}>
+          <h2 className="text-[clamp(3.5rem,3vw+1.5rem,5rem)] text-ink">Your rooms are waiting.</h2>
+          <p className="mt-4 text-lg text-ink">Pick up where you left off, with everyone in real time.</p>
+          <ul className="mt-8 border-t border-rule">
+            {[
+              { icon: Users, t: "Friends, and the room each one is in" },
+              { icon: ShieldCheck, t: "Private rooms behind a password" },
+              { icon: MessagesSquare, t: "Reply, edit and moderate, live" },
+            ].map((it) => (
+              <li key={it.t} className="flex items-center gap-3 border-b border-rule py-3.5 text-ink">
+                <it.icon size={17} className="shrink-0" aria-hidden="true" />
+                {it.t}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 font-mono text-xs text-ink-3">One sessionid cookie signs you in to the API and both WebSockets.</p>
+        </aside>
+
+        {/* Right: the form, on a raised sheet taped to the board */}
+        <div className="sheet-raised tape mx-auto w-full max-w-md px-8 pb-9 pt-10 sm:px-10" style={{ transform: "rotate(0.6deg)" }}>
+          <h1 className="text-[clamp(3.5rem,3vw+1.5rem,4.5rem)] text-ink">Log in</h1>
+          <p className="mt-2 text-ink-3">Enter your details to continue.</p>
+          {presetCode && (
+            <p className="sheet-fluoro rc-pop mt-5 px-3 py-2 text-sm">
+              Then on to room <span className="code-figure text-xl">{presetCode}</span>
+            </p>
+          )}
 
           <form onSubmit={handleLogin} className="mt-8 space-y-5" data-testid="login-form">
             <div className="space-y-2">
-              <Label htmlFor="identifier" className="font-bold text-slate-700">
-                Username or email
-              </Label>
+              <Label htmlFor="identifier">Username</Label>
               <Input
                 id="identifier"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="alex_rivera"
+                autoComplete="username"
                 autoFocus
-                className="h-12 rounded-2xl border-slate-200 bg-white px-4 focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="h-11"
                 data-testid="login-identifier-input"
               />
               {errors.username && (
-                <p className="text-sm font-semibold text-destructive">{errors.username}</p>
+                <p className="text-sm text-error">{errors.username}</p>
               )}
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="font-bold text-slate-700">
-                  Password
-                </Label>
-                <button
-                  type="button"
-                  className="text-sm font-bold text-primary hover:underline"
-                  onClick={() => toast("Password reset isn't available yet.")}
-                >
-                  Forgot?
-                </button>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPw ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="h-12 rounded-2xl border-slate-200 bg-white px-4 pr-12 focus-visible:ring-2 focus-visible:ring-primary/30"
+                  autoComplete="current-password"
+                  className="h-11 pr-12"
                   data-testid="login-password-input"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPw((s) => !s)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center text-ink-3 transition-colors hover:text-ink"
                   aria-label={showPw ? "Hide password" : "Show password"}
                   data-testid="toggle-password-visibility"
                 >
@@ -130,29 +130,30 @@ export default function Login() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-sm font-semibold text-destructive">{errors.password}</p>
+                <p className="text-sm text-error">{errors.password}</p>
               )}
             </div>
 
             <Button
               type="submit"
+              size="lg"
               disabled={loading}
-              className="h-12 w-full rounded-full text-base font-bold shadow-floating transition-all hover:-translate-y-0.5"
+              className="w-full"
               data-testid="login-submit-button"
             >
-              {loading ? <Loader2 size={18} className="mr-2 animate-spin" /> : null}
-              {loading ? "Logging in..." : "Log in"}
+              {loading ? <Loader2 size={18} className="animate-spin" /> : null}
+              {loading ? "Logging in…" : "Log in"}
             </Button>
           </form>
 
-          <p className="mt-8 text-center text-slate-500">
-            Don't have an account?{" "}
-            <Link to="/register" className="font-bold text-primary hover:underline" data-testid="go-to-register-link">
+          <p className="mt-8 text-ink-3">
+            Don’t have an account?{" "}
+            <Link to="/register" state={location.state} className="font-medium text-ink underline underline-offset-4 hover:text-ink-2" data-testid="go-to-register-link">
               Sign up
             </Link>
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,0 +1,87 @@
+/* Paste-up Night. Three boards, switched by data-mode on <html> (lib/theme.js):
+ *   light: a warm-grey board with white copy-paper sheets (never plain white);
+ *   dark:  the black wall, the main theme;
+ *   black: neutral dark grey with the same elements.
+ * With nothing stored, the OS setting picks light or dark (the media block at the end). */
+:root {
+  color-scheme: light;
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.8125rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.25rem; --text-xl: 1.5625rem; --text-2xl: 1.953rem; --text-3xl: 2.441rem;
+  --text-display-s: clamp(2.25rem, 4vw + 0.5rem, 3.75rem); --text-display: clamp(3rem, 5vw + 1rem, 6rem);
+  --text-section: clamp(2.5rem, 3vw + 1rem, 4.5rem); --text-title: clamp(1.5rem, 1vw + 1rem, 2.25rem); --text-lead: clamp(1.125rem, 0.35vw + 1rem, 1.3125rem);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-paper: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --container: 1360px; --gutter: 48px;
+  --font-display: "League Gothic", Impact, sans-serif; --font-body: "Newsreader", Georgia, serif; --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-outlier: var(--font-display);
+  --radius-card: 0; --radius-pill: 999px; --rule-hair: 1px;
+  --tracking-display: 0.01em; --display-weight: 400;
+
+  /* Light: warm-grey board, white sheets, toner ink, the fluorescent with toner type. */
+  --color-paper: #e4e1d8; --color-paper-2: #d6d2c6; --color-paper-3: #fbfaf6; --color-paper-4: #efece4;
+  --color-ink: #17140f; --color-ink-2: #2b2620; --color-muted: #5a5248;
+  --color-rule: #c9c3b5; --color-rule-2: #ddd8cc;
+  --color-accent: #e3ef3c; --color-accent-ink: #17140f; --color-accent-hover: #d6e32c; --color-focus: #17140f;
+  --color-offset: #17140f; --color-hover: #efece4; --color-overlay: rgb(23 20 15 / 0.55);
+  --color-own: #eef2c0;
+  --color-tape: rgb(217 230 47 / 0.75); --color-line: #17140f;
+  --color-error: #b3341d; --color-error-ink: #fbfaf6; --color-success: #1f8a4c;
+  --shadow-card: 0 1px 0 rgb(0 0 0 / 0.08), 0 6px 16px rgb(0 0 0 / 0.1);
+  --shadow-sheet: 0 18px 36px rgb(0 0 0 / 0.18), 0 2px 4px rgb(0 0 0 / 0.1);
+  --fibre-opacity: 0.4; --fibre-blend: multiply;
+  /* Coloured copy paper for rooms and people (lib/format.js paperFor): light stock in every theme, toner text. */
+  --color-room-1: #f3c5c5; --color-room-2: #bfd6f2; --color-room-3: #c7e8c9;
+  --color-room-4: #e7d3f4; --color-room-5: #f3d0b5; --color-room-6: #bfe6e6;
+  --color-room-ink: #17140f;
+}
+
+/* Dark: the black wall. Sheets are lighter grey paper than the board. */
+:root[data-mode="dark"] {
+  color-scheme: dark;
+  --color-paper: #1f1b17; --color-paper-2: #16130f; --color-paper-3: #2e2924; --color-paper-4: #39332d;
+  --color-ink: #f0ebe0; --color-ink-2: #ddd6c8; --color-muted: #b8af9f;
+  --color-rule: #4b433b; --color-rule-2: #3c352f;
+  --color-accent: #e3ef3c; --color-accent-ink: #17140f; --color-accent-hover: #d6e32c; --color-focus: #f0ebe0;
+  --color-offset: #0b0907; --color-hover: #39332d; --color-overlay: rgb(8 6 4 / 0.72);
+  --color-own: #dfe5a4;
+  --color-tape: rgb(227 239 60 / 0.6); --color-line: #e3ef3c;
+  --color-error: #ff8a73; --color-error-ink: #17140f; --color-success: #6fd896;
+  --shadow-card: 0 1px 0 rgb(0 0 0 / 0.2), 0 6px 16px rgb(0 0 0 / 0.3);
+  --shadow-sheet: 0 18px 36px rgb(0 0 0 / 0.42), 0 2px 4px rgb(0 0 0 / 0.3);
+  --fibre-opacity: 0.35; --fibre-blend: screen;
+}
+
+/* Black: neutral dark grey, the same elements without the warm cast. */
+:root[data-mode="black"] {
+  color-scheme: dark;
+  --color-paper: #141414; --color-paper-2: #0e0e0e; --color-paper-3: #1f1f1f; --color-paper-4: #2a2a2a;
+  --color-ink: #ececec; --color-ink-2: #d4d4d4; --color-muted: #a3a3a3;
+  --color-rule: #3a3a3a; --color-rule-2: #2e2e2e;
+  --color-accent: #e3ef3c; --color-accent-ink: #141414; --color-accent-hover: #d6e32c; --color-focus: #ececec;
+  --color-offset: #000; --color-hover: #2a2a2a; --color-overlay: rgb(0 0 0 / 0.75);
+  --color-own: #dfe5a4;
+  --color-tape: rgb(227 239 60 / 0.55); --color-line: #e3ef3c;
+  --color-error: #ff8a73; --color-error-ink: #141414; --color-success: #6fd896;
+  --shadow-card: 0 1px 0 rgb(0 0 0 / 0.3), 0 6px 16px rgb(0 0 0 / 0.4);
+  --shadow-sheet: 0 18px 36px rgb(0 0 0 / 0.5), 0 2px 4px rgb(0 0 0 / 0.35);
+  --fibre-opacity: 0.18; --fibre-blend: screen;
+}
+
+/* Nothing stored yet: a dark OS gets the dark board (same values as [data-mode="dark"]). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode]) {
+    color-scheme: dark;
+    --color-paper: #1f1b17; --color-paper-2: #16130f; --color-paper-3: #2e2924; --color-paper-4: #39332d;
+    --color-ink: #f0ebe0; --color-ink-2: #ddd6c8; --color-muted: #b8af9f;
+    --color-rule: #4b433b; --color-rule-2: #3c352f;
+    --color-accent: #e3ef3c; --color-accent-ink: #17140f; --color-accent-hover: #d6e32c; --color-focus: #f0ebe0;
+    --color-offset: #0b0907; --color-hover: #39332d; --color-overlay: rgb(8 6 4 / 0.72);
+    --color-own: #dfe5a4;
+    --color-tape: rgb(227 239 60 / 0.6); --color-line: #e3ef3c;
+    --color-error: #ff8a73; --color-error-ink: #17140f; --color-success: #6fd896;
+    --shadow-card: 0 1px 0 rgb(0 0 0 / 0.2), 0 6px 16px rgb(0 0 0 / 0.3);
+    --shadow-sheet: 0 18px 36px rgb(0 0 0 / 0.42), 0 2px 4px rgb(0 0 0 / 0.3);
+    --fibre-opacity: 0.35; --fibre-blend: screen;
+  }
+}

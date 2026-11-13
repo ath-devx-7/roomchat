@@ -1,0 +1,1048 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T05:45:30+00:00",
+  "title": "Design System: RoomChat",
+  "extensions": {
+    "colorMeta": {
+      "fluoro": {
+        "role": "primary",
+        "displayName": "Fluorescent Yellow",
+        "canonical": "#e3ef3c",
+        "tonalRamp": [
+          "#0d0d00",
+          "#272900",
+          "#444700",
+          "#636800",
+          "#848b00",
+          "#a6af00",
+          "#c9d363",
+          "#eef79f"
+        ]
+      },
+      "fluoro-hover": {
+        "role": "primary",
+        "displayName": "Fluorescent Hover",
+        "canonical": "#d6e32c",
+        "tonalRamp": [
+          "#0c0d00",
+          "#262900",
+          "#434800",
+          "#626900",
+          "#838c00",
+          "#a5af09",
+          "#c8d364",
+          "#edf7a0"
+        ]
+      },
+      "toner": {
+        "role": "neutral",
+        "displayName": "Toner",
+        "canonical": "#17140f",
+        "tonalRamp": [
+          "#0c0b09",
+          "#272521",
+          "#44423d",
+          "#64615b",
+          "#86827b",
+          "#a8a49f",
+          "#ccc9c3",
+          "#f1eeea"
+        ]
+      },
+      "light-board": {
+        "role": "neutral",
+        "displayName": "Warm Grey Board",
+        "canonical": "#e4e1d8",
+        "tonalRamp": [
+          "#0c0b08",
+          "#262521",
+          "#44423c",
+          "#63615a",
+          "#85827a",
+          "#a7a59e",
+          "#cbc9c3",
+          "#f0eee9"
+        ]
+      },
+      "light-board-deep": {
+        "role": "neutral",
+        "displayName": "Deep Board",
+        "canonical": "#d6d2c6",
+        "tonalRamp": [
+          "#0c0b08",
+          "#27251f",
+          "#44423b",
+          "#646158",
+          "#868277",
+          "#a8a59b",
+          "#ccc9c0",
+          "#f1eee7"
+        ]
+      },
+      "light-sheet": {
+        "role": "neutral",
+        "displayName": "White Copy Paper",
+        "canonical": "#fbfaf6",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#252523",
+          "#434240",
+          "#62615e",
+          "#83827f",
+          "#a6a5a2",
+          "#cac9c6",
+          "#efeeec"
+        ]
+      },
+      "light-sheet-tint": {
+        "role": "neutral",
+        "displayName": "Tinted Paper",
+        "canonical": "#efece4",
+        "tonalRamp": [
+          "#0c0b09",
+          "#262521",
+          "#44423d",
+          "#63615b",
+          "#85827b",
+          "#a7a59e",
+          "#cbc9c3",
+          "#f0eeea"
+        ]
+      },
+      "light-ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2 (light)",
+        "canonical": "#2b2620",
+        "tonalRamp": [
+          "#0d0b08",
+          "#272421",
+          "#45413c",
+          "#65605a",
+          "#87817a",
+          "#a9a49e",
+          "#cdc8c3",
+          "#f2eee9"
+        ]
+      },
+      "light-muted": {
+        "role": "neutral",
+        "displayName": "Muted (light)",
+        "canonical": "#5a5248",
+        "tonalRamp": [
+          "#0e0b07",
+          "#29241f",
+          "#47413a",
+          "#676057",
+          "#898176",
+          "#aba49a",
+          "#cfc8c0",
+          "#f3ede6"
+        ]
+      },
+      "light-rule": {
+        "role": "neutral",
+        "displayName": "Rule (light)",
+        "canonical": "#c9c3b5",
+        "tonalRamp": [
+          "#0d0b07",
+          "#28251e",
+          "#454239",
+          "#656156",
+          "#878275",
+          "#aaa599",
+          "#cdc9bf",
+          "#f2eee6"
+        ]
+      },
+      "light-rule-2": {
+        "role": "neutral",
+        "displayName": "Rule 2 (light)",
+        "canonical": "#ddd8cc",
+        "tonalRamp": [
+          "#0d0b07",
+          "#27251f",
+          "#45423a",
+          "#656158",
+          "#868277",
+          "#a9a59b",
+          "#ccc9c0",
+          "#f1eee7"
+        ]
+      },
+      "light-tape": {
+        "role": "tertiary",
+        "displayName": "Tape (light)",
+        "canonical": "rgb(217 230 47 / 0.75)",
+        "tonalRamp": [
+          "#0c0d00",
+          "#262900",
+          "#434800",
+          "#626900",
+          "#838c00",
+          "#a5af04",
+          "#c8d364",
+          "#edf79f"
+        ]
+      },
+      "wall": {
+        "role": "neutral",
+        "displayName": "The Black Wall",
+        "canonical": "#1f1b17",
+        "tonalRamp": [
+          "#0d0b09",
+          "#272522",
+          "#45413e",
+          "#65605c",
+          "#86817c",
+          "#a9a4a0",
+          "#ccc8c4",
+          "#f1eeea"
+        ]
+      },
+      "wall-deep": {
+        "role": "neutral",
+        "displayName": "Deep Wall",
+        "canonical": "#16130f",
+        "tonalRamp": [
+          "#0c0b09",
+          "#272522",
+          "#44413e",
+          "#64615c",
+          "#86827c",
+          "#a8a4a0",
+          "#ccc9c4",
+          "#f1eeea"
+        ]
+      },
+      "wall-sheet": {
+        "role": "neutral",
+        "displayName": "Grey Copy Paper",
+        "canonical": "#2e2924",
+        "tonalRamp": [
+          "#0d0b09",
+          "#272421",
+          "#45413d",
+          "#65605b",
+          "#87817b",
+          "#a9a49f",
+          "#cdc8c3",
+          "#f2eeea"
+        ]
+      },
+      "wall-sheet-tint": {
+        "role": "neutral",
+        "displayName": "Grey Paper Tint",
+        "canonical": "#39332d",
+        "tonalRamp": [
+          "#0d0b08",
+          "#282421",
+          "#46413c",
+          "#66605a",
+          "#88817a",
+          "#aaa49e",
+          "#cec8c3",
+          "#f2eee9"
+        ]
+      },
+      "wall-ink": {
+        "role": "neutral",
+        "displayName": "Wall Ink",
+        "canonical": "#f0ebe0",
+        "tonalRamp": [
+          "#0c0b08",
+          "#272520",
+          "#45423b",
+          "#656159",
+          "#868278",
+          "#a9a59c",
+          "#ccc9c1",
+          "#f1eee8"
+        ]
+      },
+      "wall-ink-2": {
+        "role": "neutral",
+        "displayName": "Wall Ink 2",
+        "canonical": "#ddd6c8",
+        "tonalRamp": [
+          "#0d0b07",
+          "#28251e",
+          "#464139",
+          "#666156",
+          "#888275",
+          "#aaa499",
+          "#cec9bf",
+          "#f2eee6"
+        ]
+      },
+      "wall-muted": {
+        "role": "neutral",
+        "displayName": "Wall Muted",
+        "canonical": "#b8af9f",
+        "tonalRamp": [
+          "#0e0b06",
+          "#29241d",
+          "#474137",
+          "#676054",
+          "#8a8172",
+          "#aca496",
+          "#cfc8bc",
+          "#f3eee4"
+        ]
+      },
+      "wall-rule": {
+        "role": "neutral",
+        "displayName": "Wall Rule",
+        "canonical": "#4b433b",
+        "tonalRamp": [
+          "#0e0b08",
+          "#292420",
+          "#47413b",
+          "#676058",
+          "#898178",
+          "#aca39c",
+          "#cfc8c1",
+          "#f3ede7"
+        ]
+      },
+      "wall-rule-2": {
+        "role": "neutral",
+        "displayName": "Wall Rule 2",
+        "canonical": "#3c352f",
+        "tonalRamp": [
+          "#0d0b08",
+          "#282421",
+          "#46413c",
+          "#67605a",
+          "#89817a",
+          "#aba39d",
+          "#cec8c2",
+          "#f3ede9"
+        ]
+      },
+      "wall-offset": {
+        "role": "neutral",
+        "displayName": "Wall Offset",
+        "canonical": "#0b0907",
+        "tonalRamp": [
+          "#0c0b0a",
+          "#262523",
+          "#43423f",
+          "#63615e",
+          "#85827e",
+          "#a7a4a2",
+          "#cbc9c6",
+          "#f0eeec"
+        ]
+      },
+      "wall-tape": {
+        "role": "tertiary",
+        "displayName": "Tape (wall)",
+        "canonical": "rgb(227 239 60 / 0.6)",
+        "tonalRamp": [
+          "#0d0d00",
+          "#272900",
+          "#444700",
+          "#636800",
+          "#848b00",
+          "#a6af00",
+          "#c9d363",
+          "#eef79f"
+        ]
+      },
+      "black-board": {
+        "role": "neutral",
+        "displayName": "Neutral Black Board",
+        "canonical": "#141414",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-board-deep": {
+        "role": "neutral",
+        "displayName": "Deep Black",
+        "canonical": "#0e0e0e",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-sheet": {
+        "role": "neutral",
+        "displayName": "Neutral Grey Paper",
+        "canonical": "#1f1f1f",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-sheet-tint": {
+        "role": "neutral",
+        "displayName": "Neutral Paper Tint",
+        "canonical": "#2a2a2a",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-ink": {
+        "role": "neutral",
+        "displayName": "Black Ink",
+        "canonical": "#ececec",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-ink-2": {
+        "role": "neutral",
+        "displayName": "Black Ink 2",
+        "canonical": "#d4d4d4",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-muted": {
+        "role": "neutral",
+        "displayName": "Black Muted",
+        "canonical": "#a3a3a3",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-rule": {
+        "role": "neutral",
+        "displayName": "Black Rule",
+        "canonical": "#3a3a3a",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-rule-2": {
+        "role": "neutral",
+        "displayName": "Black Rule 2",
+        "canonical": "#2e2e2e",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-offset": {
+        "role": "neutral",
+        "displayName": "Black Offset",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "black-tape": {
+        "role": "tertiary",
+        "displayName": "Tape (black)",
+        "canonical": "rgb(227 239 60 / 0.55)",
+        "tonalRamp": [
+          "#0d0d00",
+          "#272900",
+          "#444700",
+          "#636800",
+          "#848b00",
+          "#a6af00",
+          "#c9d363",
+          "#eef79f"
+        ]
+      },
+      "own-light": {
+        "role": "tertiary",
+        "displayName": "Own-message Paper (light)",
+        "canonical": "#eef2c0",
+        "tonalRamp": [
+          "#0c0c01",
+          "#26270f",
+          "#434526",
+          "#62653e",
+          "#838659",
+          "#a6a981",
+          "#cacdaa",
+          "#eff2d4"
+        ]
+      },
+      "own-dark": {
+        "role": "tertiary",
+        "displayName": "Own-message Paper (dark, black)",
+        "canonical": "#dfe5a4",
+        "tonalRamp": [
+          "#0c0c00",
+          "#262706",
+          "#43451b",
+          "#626632",
+          "#83884b",
+          "#a5aa75",
+          "#c9cea0",
+          "#eef3cd"
+        ]
+      },
+      "own-muted": {
+        "role": "tertiary",
+        "displayName": "Own Muted",
+        "canonical": "#4d463c",
+        "tonalRamp": [
+          "#0d0b07",
+          "#28241f",
+          "#46413a",
+          "#676057",
+          "#898176",
+          "#aba49a",
+          "#cec8c0",
+          "#f3eee6"
+        ]
+      },
+      "error-light": {
+        "role": "error",
+        "displayName": "Error (light)",
+        "canonical": "#b3341d",
+        "tonalRamp": [
+          "#230000",
+          "#4b0500",
+          "#761f0f",
+          "#a43824",
+          "#d3533c",
+          "#f18069",
+          "#ffab96",
+          "#ffd7c4"
+        ]
+      },
+      "success-light": {
+        "role": "success",
+        "displayName": "Success (light)",
+        "canonical": "#1f8a4c",
+        "tonalRamp": [
+          "#001201",
+          "#002f0f",
+          "#005026",
+          "#19743f",
+          "#34985a",
+          "#69ba82",
+          "#98dcab",
+          "#c7ffd5"
+        ]
+      },
+      "error-dark": {
+        "role": "error",
+        "displayName": "Error (dark, black)",
+        "canonical": "#ff8a73",
+        "tonalRamp": [
+          "#210000",
+          "#470d04",
+          "#702618",
+          "#9d402f",
+          "#ca5c47",
+          "#e98672",
+          "#ffaf9d",
+          "#ffdaca"
+        ]
+      },
+      "success-dark": {
+        "role": "success",
+        "displayName": "Success (dark, black)",
+        "canonical": "#6fd896",
+        "tonalRamp": [
+          "#001201",
+          "#003011",
+          "#005128",
+          "#0c7441",
+          "#2a995c",
+          "#64bb83",
+          "#95ddac",
+          "#c5ffd6"
+        ]
+      },
+      "room-rose": {
+        "role": "tertiary",
+        "displayName": "Rose Copy Paper",
+        "canonical": "#f3c5c5",
+        "tonalRamp": [
+          "#140707",
+          "#331f1f",
+          "#553a3a",
+          "#795757",
+          "#9f7676",
+          "#c09a9a",
+          "#e1c0c0",
+          "#ffe7e6"
+        ]
+      },
+      "room-blue": {
+        "role": "tertiary",
+        "displayName": "Blue Copy Paper",
+        "canonical": "#bfd6f2",
+        "tonalRamp": [
+          "#050c14",
+          "#1b2633",
+          "#354354",
+          "#516378",
+          "#6f849e",
+          "#94a7be",
+          "#bacbdf",
+          "#e2f0ff"
+        ]
+      },
+      "room-green": {
+        "role": "tertiary",
+        "displayName": "Green Copy Paper",
+        "canonical": "#c7e8c9",
+        "tonalRamp": [
+          "#050e05",
+          "#1a291c",
+          "#344835",
+          "#506951",
+          "#6d8b70",
+          "#93ad94",
+          "#b9d1bb",
+          "#e1f5e2"
+        ]
+      },
+      "room-lilac": {
+        "role": "tertiary",
+        "displayName": "Lilac Copy Paper",
+        "canonical": "#e7d3f4",
+        "tonalRamp": [
+          "#0e0812",
+          "#2a2130",
+          "#493c50",
+          "#6a5a73",
+          "#8c7a98",
+          "#ae9eb9",
+          "#d1c3da",
+          "#f5e9fd"
+        ]
+      },
+      "room-peach": {
+        "role": "tertiary",
+        "displayName": "Peach Copy Paper",
+        "canonical": "#f3d0b5",
+        "tonalRamp": [
+          "#130802",
+          "#312115",
+          "#523d2c",
+          "#755b46",
+          "#9b7b62",
+          "#bb9f89",
+          "#ddc4b1",
+          "#ffeada"
+        ]
+      },
+      "room-aqua": {
+        "role": "tertiary",
+        "displayName": "Aqua Copy Paper",
+        "canonical": "#bfe6e6",
+        "tonalRamp": [
+          "#030e0e",
+          "#162929",
+          "#2f4747",
+          "#496868",
+          "#668a8a",
+          "#8cacac",
+          "#b4cfcf",
+          "#ddf4f4"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The landing headline; auth page h1s use a smaller clamp on the same face. Always uppercase."
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Landing section heads, standfirst on the right."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Card and sheet heads."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel heads in the app and the room name."
+      },
+      "code-figure": {
+        "displayName": "Code Figure",
+        "purpose": "Room codes as poster figures, 20px to 64px."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Standfirsts, max 52ch."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, max 65ch."
+      },
+      "body-card": {
+        "displayName": "Card Body",
+        "purpose": "Copy inside sheets and chat messages."
+      },
+      "subhead": {
+        "displayName": "Subhead",
+        "purpose": "Newsreader h3 inside sheets."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons and form labels, sentence case."
+      },
+      "mono-note": {
+        "displayName": "Mono Note",
+        "purpose": "Technical notes, frame logs, data and captions under content. Never headings."
+      },
+      "mono-sticker": {
+        "displayName": "Mono Sticker",
+        "purpose": "Protocol stickers on the landing board."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "var(--shadow-card)  /* light: 0 1px 0 rgb(0 0 0 / 0.08), 0 6px 16px rgb(0 0 0 / 0.1); dark: 0.2/0.3; black: 0.3/0.4 */",
+        "purpose": "A sheet lying on the board, chat messages, ghost hover."
+      },
+      {
+        "name": "sheet",
+        "value": "var(--shadow-sheet)  /* light: 0 18px 36px rgb(0 0 0 / 0.18), 0 2px 4px rgb(0 0 0 / 0.1); dark: 0.42/0.3; black: 0.5/0.35 */",
+        "purpose": "Raised sheets, the fluorescent sheet, forms, popovers."
+      },
+      {
+        "name": "offset",
+        "value": "4px 4px 0 var(--color-offset)",
+        "purpose": "Hard ink offset under primary, outline and destructive buttons."
+      },
+      {
+        "name": "offset-sm",
+        "value": "3px 3px 0 var(--color-offset)",
+        "purpose": "Button hover: dropped 1px into the offset."
+      },
+      {
+        "name": "offset-xs",
+        "value": "2px 2px 0 var(--color-offset)",
+        "purpose": "Stickers and the code-box cells."
+      },
+      {
+        "name": "pin",
+        "value": "0 2px 0 var(--color-offset), inset -2px -2px 0 rgb(0 0 0 / 0.2)",
+        "purpose": "The pushpin head."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "State transitions, stamp thunk, flash, pop."
+      },
+      {
+        "name": "ease-paper",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Sheets and messages dropping onto the board."
+      },
+      {
+        "name": "ease-in",
+        "value": "cubic-bezier(0.7, 0, 0.84, 0)",
+        "purpose": "Exits."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.65, 0, 0.35, 1)",
+        "purpose": "Diagram lines drawing in (1.6s)."
+      },
+      {
+        "name": "dur-micro",
+        "value": "120ms",
+        "purpose": "Button press, theme switch, Copied pop."
+      },
+      {
+        "name": "dur-short",
+        "value": "220ms",
+        "purpose": "Short state changes."
+      },
+      {
+        "name": "dur-long",
+        "value": "420ms",
+        "purpose": "Longer transitions; the chat drop runs 0.42s."
+      },
+      {
+        "name": "rc-reveal",
+        "value": "0.7s ease-paper; from translateY(-18px) rotate(-1.5deg), opacity 0, to the sheet's resting tilt",
+        "purpose": "A sheet drops onto the board as it scrolls in (staggered by --d)."
+      },
+      {
+        "name": "rc-thunk",
+        "value": "0.5s ease-out; scale 1.6 -> 0.94 -> 1, rotate to -6deg",
+        "purpose": "A rubber stamp lands."
+      },
+      {
+        "name": "rc-drop",
+        "value": "0.42s ease-paper; from translateY(-10px) rotate(-1deg)",
+        "purpose": "A live chat message drops in."
+      },
+      {
+        "name": "rc-flash",
+        "value": "1.6s ease-out; inset 2px fluorescent edge and 22% tint fading out",
+        "purpose": "A member who just joined."
+      },
+      {
+        "name": "rc-pop",
+        "value": "120ms ease-out; scale 0.9 -> 1",
+        "purpose": "A swapped label (Copied) or a new frame line."
+      },
+      {
+        "name": "rc-sway",
+        "value": "6s ease-in-out infinite; -6px and -1deg at midpoint",
+        "purpose": "A gentle sway on the fluorescent code sheet."
+      },
+      {
+        "name": "rc-blink",
+        "value": "1.2s steps(1) infinite",
+        "purpose": "Live dots."
+      },
+      {
+        "name": "rc-marquee",
+        "value": "40s linear infinite; pauses on hover",
+        "purpose": "The landing ticker."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "@media (prefers-reduced-motion: reduce): every animation and transition off; reveals shown at full opacity; diagram lines drawn",
+        "purpose": "All motion stops."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "gutter-narrow",
+        "value": "40rem (gutter 16px)"
+      },
+      {
+        "name": "gutter-mid",
+        "value": "60rem (gutter 24px)"
+      },
+      {
+        "name": "board-stack",
+        "value": "900px (boards stack, no drag, no tape, stickers hidden)"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ],
+    "themes": {
+      "switch": "data-mode on <html>: light | dark | black; stored in localStorage \"roomchat-mode\"; unset follows prefers-color-scheme (dark OS -> dark).",
+      "source": "frontend/src/tokens.css"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The fluorescent key on a hard ink offset; the main action on a sheet.",
+      "html": "<button class=\"ds-btn-primary\">Create account</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;font:500 15px var(--font-body);border:0;border-radius:0;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out),box-shadow var(--dur-micro) var(--ease-out);background:var(--color-accent);color:var(--color-accent-ink);box-shadow:4px 4px 0 var(--color-offset);} .ds-btn-primary:hover{transform:translate(1px,1px);box-shadow:3px 3px 0 var(--color-offset);} .ds-btn-primary:active{transform:translate(4px,4px);box-shadow:none;} .ds-btn-primary:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px;}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Sheet paper on the same offset; the second action.",
+      "html": "<button class=\"ds-btn-outline\">Log in</button>",
+      "css": ".ds-btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;font:500 15px var(--font-body);border:0;border-radius:0;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out),box-shadow var(--dur-micro) var(--ease-out);background:var(--color-paper-3);color:var(--color-ink);box-shadow:4px 4px 0 var(--color-offset);} .ds-btn-outline:hover{transform:translate(1px,1px);box-shadow:3px 3px 0 var(--color-offset);} .ds-btn-outline:active{transform:translate(4px,4px);box-shadow:none;} .ds-btn-outline:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px;}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "No fill; lifts a sheet under itself on hover.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;font:500 15px var(--font-body);border:0;border-radius:0;cursor:pointer;transition:background-color var(--dur-micro) var(--ease-out),transform var(--dur-micro) var(--ease-out),box-shadow var(--dur-micro) var(--ease-out);background:transparent;color:var(--color-ink);} .ds-btn-ghost:hover{background:var(--color-paper-3);box-shadow:var(--shadow-card);} .ds-btn-ghost:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px;}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Square sheet-paper field with a 1px ink border; focus is the global outline.",
+      "html": "<input class=\"ds-input\" placeholder=\"Username\">",
+      "css": ".ds-input{height:40px;width:260px;padding:4px 12px;font:400 1rem var(--font-body);color:var(--color-ink);background:var(--color-paper-3);border:1px solid var(--color-ink);border-radius:0;} .ds-input::placeholder{color:var(--color-muted);} .ds-input:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px;}"
+    },
+    {
+      "name": "Theme Switch",
+      "kind": "nav",
+      "refersTo": "theme-toggle",
+      "description": "Three-way segmented control in every header; the current board sits on the fluorescent.",
+      "html": "<div class=\"ds-theme\" role=\"group\" aria-label=\"Theme\"><button aria-label=\"Light theme\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"/></svg></button><button aria-label=\"Dark theme\" aria-pressed=\"true\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z\"/></svg></button><button aria-label=\"Black theme\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"10\"/></svg></button></div>",
+      "css": ".ds-theme{display:inline-flex;padding:2px;background:var(--color-paper-4);border:1px solid var(--color-rule);} .ds-theme button{display:grid;place-items:center;width:36px;height:32px;border:0;background:transparent;color:var(--color-muted);cursor:pointer;transition:color var(--dur-micro);} .ds-theme button:hover{color:var(--color-ink);} .ds-theme button[aria-pressed=true]{background:var(--color-accent);color:var(--color-accent-ink);} .ds-theme button:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px;}"
+    },
+    {
+      "name": "Pinned Sheet",
+      "kind": "card",
+      "refersTo": "sheet",
+      "description": "Copy paper on the board with a card lift, a yellow pushpin and a small resting tilt.",
+      "html": "<div class=\"ds-sheet\"><h2>Join a room</h2><p>Type the six-character code a friend shared.</p><p class=\"ds-cap\">Fig. 1: codes are A-Z and 0-9.</p></div>",
+      "css": ".ds-sheet{position:relative;max-width:340px;padding:40px 24px 24px;background:var(--color-paper-3);color:var(--color-ink);box-shadow:var(--shadow-card);transform:rotate(-0.8deg);font:400 15px/1.625 var(--font-body);} .ds-sheet::after{content:'';position:absolute;left:50%;top:7px;width:14px;height:14px;border-radius:50%;transform:translateX(-50%);background:var(--color-accent);box-shadow:0 2px 0 var(--color-offset),inset -2px -2px 0 rgb(0 0 0/.2);} .ds-sheet h2{margin:0;font:400 44px/1 var(--font-display);letter-spacing:.01em;text-transform:uppercase;} .ds-sheet p{margin:8px 0 0;} .ds-cap{font:400 .75rem var(--font-mono);color:var(--color-muted);}"
+    },
+    {
+      "name": "Fluorescent Sheet",
+      "kind": "card",
+      "refersTo": "sheet-fluoro",
+      "description": "The one fluorescent sheet on a screen, toner type, with a room code as a poster figure.",
+      "html": "<div class=\"ds-fluoro\"><h2>Got a code?</h2><p class=\"ds-code\">82S0OT</p></div>",
+      "css": ".ds-fluoro{max-width:320px;padding:40px 24px 24px;background:var(--color-accent);color:var(--color-accent-ink);box-shadow:var(--shadow-sheet);transform:rotate(2.5deg);} .ds-fluoro h2{margin:0;font:400 44px/1 var(--font-display);text-transform:uppercase;letter-spacing:.01em;} .ds-code{margin:12px 0 0;font:400 56px/.95 var(--font-display);letter-spacing:.06em;}"
+    },
+    {
+      "name": "Own Message",
+      "kind": "custom",
+      "refersTo": "own-message",
+      "description": "Your chat message: yellow-tinted paper with toner ink in every theme, beside a plain-paper message from someone else.",
+      "html": "<div class=\"ds-chat\"><div class=\"ds-msg\">Are we still on for Friday?</div><div class=\"ds-msg ds-own\">Yes, 7pm. Bring the code.</div></div>",
+      "css": ".ds-chat{display:flex;flex-direction:column;gap:8px;max-width:340px;} .ds-msg{width:fit-content;padding:8px 14px;font:400 15px/1.625 var(--font-body);background:var(--color-paper-3);color:var(--color-ink);box-shadow:var(--shadow-card);} .ds-own{align-self:flex-end;background:var(--color-own);color:#17140f;}"
+    },
+    {
+      "name": "Sticker and Stamp",
+      "kind": "chip",
+      "refersTo": "sticker",
+      "description": "A mono protocol sticker on a 2px offset, and a rubber stamp inked in the error colour.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-sticker\">close 4005</span><span class=\"ds-sticker ds-sticker-fluoro\">PUBLISH room_82S0OT</span><span class=\"ds-stamp\">3 pending</span></div>",
+      "css": ".ds-row{display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:12px;} .ds-sticker{font:500 12px var(--font-mono);padding:6px 10px;background:var(--color-paper-4);color:var(--color-ink);box-shadow:2px 2px 0 var(--color-offset);transform:rotate(-4deg);white-space:nowrap;} .ds-sticker-fluoro{background:var(--color-accent);color:var(--color-accent-ink);transform:rotate(3deg);} .ds-stamp{display:inline-block;font:400 26px/1.1 var(--font-display);letter-spacing:.06em;text-transform:uppercase;padding:4px 12px;border:3px solid currentColor;color:var(--color-error);transform:rotate(-6deg);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Paste-up Night",
+    "overview": "RoomChat is a paste-up board worked on late: copy-paper sheets pinned and taped to a wall, a single fluorescent yellow marker, condensed poster capitals for heads and room codes, and a newspaper serif for everything you read. The main theme is the black wall (dark); light is a warm-grey board with white sheets; black is the same board in neutral grey. Every element exists in all three, and only the board and sheet stocks change.\n\nDepth comes from paper, not boxes: sheets lift off the board on soft shadows, controls sit on a hard ink offset and press into it, pinned sheets rest at small tilts. The landing page is an Evidence Board: cards on a fixed-size canvas, joined by yellow tape lines, that a visitor can drag (the tape follows). The app screens (login, register, dashboard, room) use the same sheets, pins, tape and motion, but nothing on them moves under the pointer. Under 900px a board stacks its cards in reading order with no tape and no dragging.\n\nMotion is paper physics: sheets drop onto the board as they scroll in, stamps thunk down, a new chat message drops in like a slip, a joining member's row flashes a fluorescent edge, a swapped label pops. All of it stops under `prefers-reduced-motion`.",
+    "keyCharacteristics": [
+      "Three boards switched by `data-mode` on `<html>` (light, dark, black); with nothing stored, the OS picks light or dark.",
+      "One fluorescent yellow, used as paper (a fill with toner type), never as a text colour.",
+      "Square corners everywhere; only pushpins are round.",
+      "League Gothic capitals for heads and codes, Newsreader for reading, Geist Mono only for technical notes, frames and data.",
+      "Soft paper lifts under sheets, a hard 4px ink offset under buttons.",
+      "Draggable evidence board on the landing; static boards in the app."
+    ],
+    "rules": [
+      {
+        "name": "The One Fluorescent Rule",
+        "body": "Fluorescent yellow fills the primary control and at most one sheet per screen, always with toner type. It is paper, never a word colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Own Paper Rule",
+        "body": "Your own messages are yellow-tinted copy paper with toner ink in every theme; other people's are plain sheet paper.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never Plain White Rule",
+        "body": "The light board is warm grey with white sheets on it. White is a sheet, never the board.",
+        "section": "colors"
+      },
+      {
+        "name": "The Poster Caps Rule",
+        "body": "League Gothic is always uppercase and only for heads, codes, stamps and big counted figures; it never sets a sentence of body text.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is Technical Rule",
+        "body": "Geist Mono appears only for technical notes, protocol frames, data and captions. Never for headings or prose.",
+        "section": "typography"
+      },
+      {
+        "name": "The Caption Below Rule",
+        "body": "Labels and captions go under the thing they describe (\"Fig. 2: …\"). No kicker or eyebrow line above a heading.",
+        "section": "typography"
+      },
+      {
+        "name": "The Press Into The Offset Rule",
+        "body": "A button sits on a 4px ink offset, drops 1px toward it on hover, and presses fully into it on click.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Small Tilt Rule",
+        "body": "Pinned sheets rest at tilts between about -1.5deg and 2.5deg; stickers and stamps may go to about 6deg. Inputs, tables and long reading stay square.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** put toner type on every fluorescent, own-message and coloured-paper surface, in all three themes.",
+      "**Do** keep fluorescent to the primary control and one sheet per screen.",
+      "**Do** give every element a value in all three boards through the tokens; never hardcode a board colour.",
+      "**Do** set captions in Geist Mono under the thing they label.",
+      "**Do** keep dragging to the landing's Evidence Board; app screens are static.",
+      "**Do** stop every animation under `prefers-reduced-motion`, and show revealed content at full opacity."
+    ],
+    "donts": [
+      "**Don't** use plain white as the light board; white is for sheets.",
+      "**Don't** put a kicker or eyebrow line above a heading.",
+      "**Don't** use Geist Mono for headings or prose.",
+      "**Don't** round corners; only pushpins are round.",
+      "**Don't** use fluorescent yellow as a text colour on the board.",
+      "**Don't** tilt inputs, tables or long reading."
+    ]
+  }
+}

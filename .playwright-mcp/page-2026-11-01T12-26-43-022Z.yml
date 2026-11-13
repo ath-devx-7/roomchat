@@ -1,0 +1,1275 @@
+- generic [active] [ref=f51e1]:
+  - banner [ref=f51e2]:
+    - img "Impeccable" [ref=f51e4]
+  - main [ref=f51e19]:
+    - generic [ref=f51e20]:
+      - 'heading "Choose RoomChat''s new visual world (round 5: content-rich, three themes)" [level=1] [ref=f51e29]'
+      - paragraph [ref=f51e30]: "Every card is a full landing page with the same real content: a working demo room, join-by-code, six features with their technical detail, the path of a message, the dashboard, proposed extras and the stack. Each has Light (tinted), Dark and Black themes: open a sketch and use the switch in its header. The one-line take is only my opinion."
+      - generic [ref=f51e31]:
+        - generic [ref=f51e32]:
+          - article [ref=f51e33]:
+            - generic [ref=f51e34]:
+              - generic [ref=f51e35]:
+                - generic [ref=f51e36]:
+                  - iframe [aria-hidden] [ref=f51e38]:
+                    - generic [ref=f52e1]:
+                      - banner [ref=f52e2]:
+                        - generic [ref=f52e3]:
+                          - group "Theme" [ref=f52e12]:
+                            - button "Light theme" [pressed] [ref=f52e13] [cursor=pointer]
+                            - button "Dark theme" [ref=f52e17] [cursor=pointer]
+                            - button "Black theme" [ref=f52e20] [cursor=pointer]
+                          - button [ref=f52e23] [cursor=pointer]
+                          - button [ref=f52e25] [cursor=pointer]
+                      - generic [ref=f52e27]:
+                        - complementary [ref=f52e28]:
+                          - heading [level=5] [ref=f52e29]
+                          - link [ref=f52e31] [cursor=pointer]:
+                            - /url: "#"
+                          - link [ref=f52e33] [cursor=pointer]:
+                            - /url: "#"
+                          - heading [level=5] [ref=f52e35]
+                          - link [ref=f52e37] [cursor=pointer]:
+                            - /url: "#f-code"
+                          - link [ref=f52e39] [cursor=pointer]:
+                            - /url: "#f-chat"
+                          - link [ref=f52e41] [cursor=pointer]:
+                            - /url: "#f-presence"
+                          - link [ref=f52e43] [cursor=pointer]:
+                            - /url: "#f-friends"
+                          - link [ref=f52e45] [cursor=pointer]:
+                            - /url: "#f-invite"
+                          - link [ref=f52e47] [cursor=pointer]:
+                            - /url: "#f-mod"
+                          - heading [level=5] [ref=f52e49]
+                          - link [ref=f52e51] [cursor=pointer]:
+                            - /url: "#how"
+                          - link [ref=f52e53] [cursor=pointer]:
+                            - /url: "#stack"
+                          - link [ref=f52e55] [cursor=pointer]:
+                            - /url: "#extras"
+                        - article [ref=f52e57]:
+                          - heading "Real-time rooms, addressed by a six-character code." [level=1] [ref=f52e60]
+                          - paragraph [ref=f52e61]
+                          - generic [ref=f52e65]:
+                            - button [ref=f52e66] [cursor=pointer]
+                            - button [ref=f52e68] [cursor=pointer]
+                          - generic [ref=f52e70]:
+                            - textbox "Room code" [ref=f52e74]
+                            - button [ref=f52e81] [cursor=pointer]
+                          - generic [ref=f52e83]:
+                            - generic [ref=f52e84]: "6"
+                            - generic [ref=f52e89]: 2–100
+                            - generic [ref=f52e94]: "100"
+                            - generic [ref=f52e99]: "4"
+                            - generic [ref=f52e104]: "8"
+                            - generic [ref=f52e110]: "55"
+                          - generic [ref=f52e114]:
+                            - generic [ref=f52e115]:
+                              - heading "Rooms by code" [level=2] [ref=f52e118]
+                              - paragraph [ref=f52e119]
+                            - generic [ref=f52e139]:
+                              - heading "Live chat" [level=2] [ref=f52e142]
+                              - paragraph [ref=f52e143]
+                            - generic [ref=f52e190]:
+                              - heading "Presence" [level=2] [ref=f52e193]
+                              - paragraph [ref=f52e194]
+                            - generic [ref=f52e234]:
+                              - heading "Friends" [level=2] [ref=f52e237]
+                              - paragraph [ref=f52e238]
+                            - generic [ref=f52e266]:
+                              - heading "Invitations" [level=2] [ref=f52e269]
+                              - paragraph [ref=f52e270]
+                            - generic [ref=f52e318]:
+                              - heading "Moderation" [level=2] [ref=f52e321]
+                              - paragraph [ref=f52e322]
+                          - generic [ref=f52e355]:
+                            - heading "The path of one message" [level=2] [ref=f52e358]
+                            - paragraph [ref=f52e359]
+                          - generic [ref=f52e398]:
+                            - heading "What it's built with" [level=2] [ref=f52e401]
+                            - table [ref=f52e402]:
+                              - rowgroup [ref=f52e403]:
+                                - row [ref=f52e404]:
+                                  - columnheader [ref=f52e405]
+                                  - columnheader [ref=f52e407]
+                              - rowgroup [ref=f52e409]:
+                                - row [ref=f52e410]:
+                                  - cell [ref=f52e411]
+                                  - cell [ref=f52e413]
+                                - row [ref=f52e415]:
+                                  - cell [ref=f52e416]
+                                  - cell [ref=f52e418]
+                                - row [ref=f52e420]:
+                                  - cell [ref=f52e421]
+                                  - cell [ref=f52e423]
+                                - row [ref=f52e425]:
+                                  - cell [ref=f52e426]
+                                  - cell [ref=f52e428]
+                                - row [ref=f52e430]:
+                                  - cell [ref=f52e431]
+                                  - cell [ref=f52e433]
+                                - row [ref=f52e435]:
+                                  - cell [ref=f52e436]
+                                  - cell [ref=f52e438]
+                                - row [ref=f52e440]:
+                                  - cell [ref=f52e441]
+                                  - cell [ref=f52e443]
+                                - row [ref=f52e445]:
+                                  - cell [ref=f52e446]
+                                  - cell [ref=f52e448]
+                          - generic [ref=f52e450]:
+                            - heading "Browser-only extras" [level=2] [ref=f52e453]
+                            - paragraph [ref=f52e454]
+                            - list [ref=f52e457]:
+                              - listitem [ref=f52e458]
+                              - listitem [ref=f52e463]
+                              - listitem [ref=f52e468]
+                              - listitem [ref=f52e473]
+                              - listitem [ref=f52e478]
+                              - listitem [ref=f52e483]
+                        - complementary [ref=f52e488]:
+                          - list [ref=f52e496]:
+                            - listitem [ref=f52e497]
+                            - listitem [ref=f52e502]
+                          - list [ref=f52e507]:
+                            - listitem [ref=f52e508]:
+                              - paragraph [ref=f52e514]
+                              - button "Reply" [ref=f52e519] [cursor=pointer]
+                          - generic [ref=f52e521]:
+                            - textbox "Message" [ref=f52e522]:
+                              - /placeholder: Try sending a message
+                            - button [ref=f52e523] [cursor=pointer]
+                          - generic [ref=f52e525]:
+                            - heading [level=6] [ref=f52e526]
+                            - list
+                      - contentinfo [ref=f52e528]
+                  - paragraph [ref=f51e39]: sketch
+                  - generic [ref=f51e40]:
+                    - button "Expand the image" [ref=f51e41] [cursor=pointer]
+                    - button "Flip the card" [ref=f51e44] [cursor=pointer]:
+                      - generic [ref=f51e48]: Details
+                - generic [ref=f51e49]:
+                  - paragraph [ref=f51e50]: "developer documentation sites: section nav, reference pages, code samples"
+                  - heading "Protocol Docs" [level=2] [ref=f51e51]
+                  - paragraph [ref=f51e52]: The landing reads like the project's own documentation, with the live demo pinned beside it.
+                  - generic [ref=f51e53]:
+                    - generic [ref=f51e54]:
+                      - generic "#ecf3ee" [ref=f51e55]
+                      - generic "#13221a" [ref=f51e56]
+                      - generic "#0f766e" [ref=f51e57]
+                      - generic "#0c1611" [ref=f51e58]
+                      - generic "#151515" [ref=f51e59]
+                    - generic [ref=f51e60]: sticky section nav
+                    - generic [ref=f51e61]: real request/frame samples
+                    - generic [ref=f51e62]: pinned demo rail
+                  - paragraph [ref=f51e63]:
+                    - generic [ref=f51e64]: Risk
+                    - text: Can feel like a docs site rather than a product; the app screens would need their own calmer layout.
+                  - button "Build this" [ref=f51e65] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Protocol Docs
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: "Left: section menu. Centre: headline, join-by-code, six stats, then one doc section per feature with its real HTTP or WebSocket frame. Right: the demo room and its frames, pinned while you scroll."
+                  - paragraph:
+                    - generic: The case
+                    - text: "My take: the most technical and the most honest for recruiters; every claim has the real frame next to it."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Can feel like a docs site rather than a product; the app screens would need their own calmer layout.
+                  - button "Build this"
+          - article [ref=f51e66]:
+            - generic [ref=f51e67]:
+              - generic [ref=f51e68]:
+                - generic [ref=f51e69]: IMPECCABLE’S PICK
+                - generic [ref=f51e70]:
+                  - iframe [aria-hidden] [ref=f51e72]:
+                    - generic [ref=f53e1]:
+                      - banner [ref=f53e2]:
+                        - generic [ref=f53e3]:
+                          - navigation [ref=f53e8]:
+                            - link [ref=f53e9] [cursor=pointer]:
+                              - /url: "#features"
+                            - link [ref=f53e11] [cursor=pointer]:
+                              - /url: "#how"
+                            - link [ref=f53e13] [cursor=pointer]:
+                              - /url: "#app"
+                            - link [ref=f53e15] [cursor=pointer]:
+                              - /url: "#stack"
+                          - group "Theme" [ref=f53e19]:
+                            - button "Light theme" [pressed] [ref=f53e20] [cursor=pointer]
+                            - button "Dark theme" [ref=f53e24] [cursor=pointer]
+                            - button "Black theme" [ref=f53e27] [cursor=pointer]
+                          - button [ref=f53e30] [cursor=pointer]
+                          - button [ref=f53e32] [cursor=pointer]
+                      - main [ref=f53e34]:
+                        - generic [ref=f53e35]:
+                          - generic [ref=f53e36]:
+                            - heading "Chat rooms addressed by a six-character code." [level=1] [ref=f53e39]
+                            - paragraph [ref=f53e40]
+                            - generic [ref=f53e44]:
+                              - button [ref=f53e45] [cursor=pointer]
+                              - button [ref=f53e47] [cursor=pointer]
+                            - generic [ref=f53e49]:
+                              - textbox "Room code" [ref=f53e53]
+                              - button [ref=f53e60] [cursor=pointer]
+                          - generic [ref=f53e83]:
+                            - list [ref=f53e89]:
+                              - listitem [ref=f53e90]
+                              - listitem [ref=f53e97]
+                            - generic [ref=f53e106]:
+                              - list [ref=f53e114]:
+                                - listitem [ref=f53e115]:
+                                  - paragraph [ref=f53e121]
+                                  - button "Reply" [ref=f53e126] [cursor=pointer]
+                              - generic [ref=f53e128]:
+                                - textbox "Message" [ref=f53e129]:
+                                  - /placeholder: Type a message… (try it)
+                                - button [ref=f53e130] [cursor=pointer]
+                            - list [ref=f53e137]
+                        - generic [ref=f53e140]:
+                          - generic [ref=f53e141]:
+                            - heading "Everything in a room, pushed live." [level=2] [ref=f53e145]
+                            - paragraph [ref=f53e146]
+                          - generic [ref=f53e149]:
+                            - generic [ref=f53e150]:
+                              - heading [level=3] [ref=f53e151]
+                              - paragraph [ref=f53e153]
+                            - generic [ref=f53e161]:
+                              - heading [level=3] [ref=f53e162]
+                              - paragraph [ref=f53e164]
+                            - generic [ref=f53e171]:
+                              - heading [level=3] [ref=f53e172]
+                              - paragraph [ref=f53e174]
+                            - generic [ref=f53e180]:
+                              - heading [level=3] [ref=f53e181]
+                              - paragraph [ref=f53e183]
+                            - generic [ref=f53e189]:
+                              - heading [level=3] [ref=f53e190]
+                              - paragraph [ref=f53e192]
+                            - generic [ref=f53e198]:
+                              - heading [level=3] [ref=f53e199]
+                              - paragraph [ref=f53e201]
+                        - generic [ref=f53e209]:
+                          - heading "The path of one message." [level=2] [ref=f53e213]
+                          - paragraph [ref=f53e214]
+                        - generic [ref=f53e248]:
+                          - generic [ref=f53e249]:
+                            - heading "Your dashboard, at a glance." [level=2] [ref=f53e253]
+                            - paragraph [ref=f53e254]
+                          - generic [ref=f53e257]:
+                            - generic [ref=f53e258]:
+                              - heading [level=4] [ref=f53e265]
+                              - generic [ref=f53e282]:
+                                - heading [level=4] [ref=f53e283]
+                                - generic [ref=f53e289]:
+                                  - button [ref=f53e290] [cursor=pointer]
+                                  - button [ref=f53e292] [cursor=pointer]
+                              - heading [level=4] [ref=f53e295]
+                              - heading [level=4] [ref=f53e300]
+                            - list [ref=f53e313]:
+                              - listitem [ref=f53e314]
+                              - listitem [ref=f53e319]
+                              - listitem [ref=f53e324]
+                              - listitem [ref=f53e329]
+                              - listitem [ref=f53e334]
+                              - listitem [ref=f53e341]
+                        - generic [ref=f53e347]:
+                          - heading "What it's built with." [level=2] [ref=f53e351]
+                          - paragraph [ref=f53e352]
+                        - generic [ref=f53e397]:
+                          - heading "Create a room. Share the code." [level=2] [ref=f53e398]
+                          - button [ref=f53e399] [cursor=pointer]
+                      - contentinfo [ref=f53e401]
+                  - paragraph [ref=f51e73]: sketch
+                  - generic [ref=f51e74]:
+                    - button "Expand the image" [ref=f51e75] [cursor=pointer]
+                    - button "Flip the card" [ref=f51e78] [cursor=pointer]:
+                      - generic [ref=f51e82]: Details
+                - generic [ref=f51e83]:
+                  - paragraph [ref=f51e84]: "real-time product consoles: dense panes, live logs, status lights"
+                  - heading "Live Console" [level=2] [ref=f51e85]
+                  - paragraph [ref=f51e86]: "The landing opens on the app itself: members, chat and a live frame log side by side."
+                  - generic [ref=f51e87]:
+                    - generic [ref=f51e88]:
+                      - generic "#eaf0f8" [ref=f51e89]
+                      - generic "#0f1a2b" [ref=f51e90]
+                      - generic "#2563eb" [ref=f51e91]
+                      - generic "#0b1220" [ref=f51e92]
+                      - generic "#141414" [ref=f51e93]
+                    - generic [ref=f51e94]: three-pane console
+                    - generic [ref=f51e95]: WebSocket frame log
+                    - generic [ref=f51e96]: fact grid
+                  - paragraph [ref=f51e97]:
+                    - generic [ref=f51e98]: Risk
+                    - text: Familiar product-console look; it relies on the demo being lively.
+                  - button "Build this" [ref=f51e99] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Live Console
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: "Left column: headline, join-by-code, four facts. Right: a three-pane console (members · chat · frames) running the demo; feature cards with tech notes below."
+                  - paragraph:
+                    - generic: The case
+                    - text: "My take: shows the real-time behaviour fastest, and the same panes carry straight into the chat page."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Familiar product-console look; it relies on the demo being lively.
+                  - button "Build this"
+          - article [ref=f51e100]:
+            - generic [ref=f51e101]:
+              - generic [ref=f51e102]:
+                - generic [ref=f51e103]:
+                  - iframe [aria-hidden] [ref=f51e105]:
+                    - generic [ref=f54e1]:
+                      - banner [ref=f54e2]:
+                        - generic [ref=f54e3]:
+                          - navigation [ref=f54e7]:
+                            - link [ref=f54e8] [cursor=pointer]:
+                              - /url: "#features"
+                            - link [ref=f54e10] [cursor=pointer]:
+                              - /url: "#how"
+                            - link [ref=f54e12] [cursor=pointer]:
+                              - /url: "#app"
+                            - link [ref=f54e14] [cursor=pointer]:
+                              - /url: "#stack"
+                          - group "Theme" [ref=f54e16]:
+                            - button "Light theme" [pressed] [ref=f54e17] [cursor=pointer]
+                            - button "Dark theme" [ref=f54e21] [cursor=pointer]
+                            - button "Black theme" [ref=f54e24] [cursor=pointer]
+                          - button [ref=f54e27] [cursor=pointer]
+                          - button [ref=f54e29] [cursor=pointer]
+                      - main [ref=f54e31]:
+                        - generic [ref=f54e32]:
+                          - generic [ref=f54e33]:
+                            - generic [ref=f54e34]:
+                              - heading "Six characters open a live room." [level=1] [ref=f54e37]
+                              - paragraph [ref=f54e38]
+                            - generic [ref=f54e41]:
+                              - button [ref=f54e42] [cursor=pointer]
+                              - button [ref=f54e44] [cursor=pointer]
+                          - generic [ref=f54e46]:
+                            - generic [ref=f54e56]:
+                              - list [ref=f54e57]:
+                                - listitem [ref=f54e58]:
+                                  - paragraph [ref=f54e64]
+                                  - button "Reply" [ref=f54e68] [cursor=pointer]
+                              - list [ref=f54e73]:
+                                - listitem [ref=f54e74]
+                                - listitem [ref=f54e81]
+                            - generic [ref=f54e90]:
+                              - textbox "Message" [ref=f54e91]:
+                                - /placeholder: Try sending a message (simulated)
+                              - button [ref=f54e92] [cursor=pointer]
+                          - generic [ref=f54e97]:
+                            - textbox "Room code" [ref=f54e99]
+                            - button [ref=f54e106] [cursor=pointer]
+                          - generic [ref=f54e108]: 2–100
+                          - generic [ref=f54e114]: "100"
+                          - generic [ref=f54e134]:
+                            - list
+                          - generic [ref=f54e137]: "55"
+                        - generic [ref=f54e143]:
+                          - generic [ref=f54e144]:
+                            - heading "Everything in a room, pushed live." [level=2] [ref=f54e145]: Everything in a room,pushed live.
+                            - paragraph [ref=f54e146]
+                          - generic [ref=f54e149]:
+                            - generic [ref=f54e150]:
+                              - heading [level=3] [ref=f54e153]
+                              - paragraph [ref=f54e155]
+                            - generic [ref=f54e161]:
+                              - heading [level=3] [ref=f54e164]
+                              - paragraph [ref=f54e166]
+                            - generic [ref=f54e172]:
+                              - heading [level=3] [ref=f54e175]
+                              - paragraph [ref=f54e177]
+                            - generic [ref=f54e183]:
+                              - heading [level=3] [ref=f54e186]
+                              - paragraph [ref=f54e188]
+                            - generic [ref=f54e194]:
+                              - heading [level=3] [ref=f54e197]
+                              - paragraph [ref=f54e199]
+                            - generic [ref=f54e205]:
+                              - heading [level=3] [ref=f54e208]
+                              - paragraph [ref=f54e210]
+                        - generic [ref=f54e214]:
+                          - generic [ref=f54e215]:
+                            - heading "The path of one message." [level=2] [ref=f54e216]
+                            - paragraph [ref=f54e217]
+                          - generic [ref=f54e219]:
+                            - generic [ref=f54e220]: "01"
+                            - generic [ref=f54e227]: "02"
+                            - generic [ref=f54e234]: "03"
+                            - generic [ref=f54e241]: "04"
+                            - generic [ref=f54e248]: "05"
+                        - generic [ref=f54e255]:
+                          - generic [ref=f54e256]:
+                            - heading "Inside the app." [level=2] [ref=f54e257]
+                            - paragraph [ref=f54e258]
+                          - generic [ref=f54e261]:
+                            - heading [level=4] [ref=f54e263]
+                            - generic [ref=f54e280]:
+                              - heading [level=4] [ref=f54e281]
+                              - generic [ref=f54e287]:
+                                - button [ref=f54e288] [cursor=pointer]
+                                - button [ref=f54e290] [cursor=pointer]
+                            - generic [ref=f54e292]:
+                              - heading [level=4] [ref=f54e293]
+                              - list [ref=f54e295]:
+                                - listitem [ref=f54e296]
+                                - listitem [ref=f54e301]
+                                - listitem [ref=f54e306]
+                                - listitem [ref=f54e311]
+                                - listitem [ref=f54e316]
+                                - listitem [ref=f54e321]
+                        - generic [ref=f54e327]:
+                          - heading "Stack." [level=2] [ref=f54e328]
+                          - paragraph [ref=f54e329]
+                        - generic [ref=f54e386]:
+                          - heading "Create a room. Share the code." [level=2] [ref=f54e387]
+                          - button [ref=f54e388] [cursor=pointer]
+                      - contentinfo [ref=f54e390]
+                  - paragraph [ref=f51e106]: sketch
+                  - generic [ref=f51e107]:
+                    - button "Expand the image" [ref=f51e108] [cursor=pointer]
+                    - button "Flip the card" [ref=f51e111] [cursor=pointer]:
+                      - generic [ref=f51e115]: Details
+                - generic [ref=f51e116]:
+                  - paragraph [ref=f51e117]: "modern bento layouts: mixed-size tiles"
+                  - heading "Bento Grid" [level=2] [ref=f51e118]
+                  - paragraph [ref=f51e119]: "Everything is a tile: the first screen is already full of the product."
+                  - generic [ref=f51e120]:
+                    - generic [ref=f51e121]:
+                      - generic "#efedf8" [ref=f51e122]
+                      - generic "#1b1530" [ref=f51e123]
+                      - generic "#6d28d9" [ref=f51e124]
+                      - generic "#110d1d" [ref=f51e125]
+                      - generic "#131313" [ref=f51e126]
+                    - generic [ref=f51e127]: rounded tiles
+                    - generic [ref=f51e128]: one dark hero tile
+                    - generic [ref=f51e129]: violet accent
+                  - paragraph [ref=f51e130]:
+                    - generic [ref=f51e131]: Risk
+                    - text: Bento grids are a very common modern look.
+                  - button "Build this" [ref=f51e132] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Bento Grid
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: "A 12-column tile grid: headline tile, big demo-room tile, code tile, capacity/history/tests tiles, a stack tile and a live frames tile."
+                  - paragraph:
+                    - generic: The case
+                    - text: "My take: the densest first screen; very modern, a little expected."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Bento grids are a very common modern look.
+                  - button "Build this"
+          - article [ref=f51e133]:
+            - generic [ref=f51e134]:
+              - generic [ref=f51e135]:
+                - generic [ref=f51e136]:
+                  - iframe [aria-hidden] [ref=f51e138]:
+                    - generic [ref=f55e1]:
+                      - banner [ref=f55e2]:
+                        - generic [ref=f55e3]:
+                          - generic [ref=f55e4]: RoomChat
+                          - navigation [ref=f55e5]:
+                            - link [ref=f55e6] [cursor=pointer]:
+                              - /url: "#c1"
+                            - link [ref=f55e8] [cursor=pointer]:
+                              - /url: "#c2"
+                            - link [ref=f55e10] [cursor=pointer]:
+                              - /url: "#c3"
+                            - link [ref=f55e12] [cursor=pointer]:
+                              - /url: "#c4"
+                            - link [ref=f55e14] [cursor=pointer]:
+                              - /url: "#c5"
+                          - group "Theme" [ref=f55e16]:
+                            - button "Light theme" [pressed] [ref=f55e17] [cursor=pointer]
+                            - button "Dark theme" [ref=f55e21] [cursor=pointer]
+                            - button "Black theme" [ref=f55e24] [cursor=pointer]
+                          - button [ref=f55e27] [cursor=pointer]
+                          - button [ref=f55e29] [cursor=pointer]
+                      - main [ref=f55e31]:
+                        - generic [ref=f55e33]:
+                          - heading [level=1] [ref=f55e36]:
+                            - text: Rooms you enter with
+                            - emphasis [ref=f55e37]: six characters.
+                          - paragraph [ref=f55e38]
+                          - generic [ref=f55e42]:
+                            - button [ref=f55e43] [cursor=pointer]
+                            - button [ref=f55e45] [cursor=pointer]
+                        - generic [ref=f55e72]:
+                          - generic [ref=f55e74]:
+                            - generic [ref=f55e75]:
+                              - generic [ref=f55e76]: Friday plans
+                              - list [ref=f55e80]:
+                                - listitem [ref=f55e81]:
+                                  - paragraph [ref=f55e87]
+                                  - button "Reply" [ref=f55e91] [cursor=pointer]
+                              - generic [ref=f55e93]:
+                                - textbox "Message" [ref=f55e94]:
+                                  - /placeholder: Try sending a message
+                                - button [ref=f55e95] [cursor=pointer]
+                            - generic [ref=f55e97]:
+                              - heading [level=6] [ref=f55e98]
+                              - list [ref=f55e102]:
+                                - listitem [ref=f55e103]
+                                - listitem [ref=f55e110]
+                          - generic [ref=f55e121]:
+                            - heading "What you're looking at" [level=4] [ref=f55e122]
+                            - paragraph [ref=f55e123]
+                            - generic [ref=f55e130]:
+                              - textbox "Room code" [ref=f55e134]
+                              - button [ref=f55e141] [cursor=pointer]
+                        - generic [ref=f55e143]:
+                          - generic [ref=f55e144]: "01"
+                          - generic [ref=f55e147]:
+                            - heading "A room is a code, not a channel list." [level=2] [ref=f55e148]
+                            - paragraph [ref=f55e149]
+                            - generic [ref=f55e153]:
+                              - generic [ref=f55e154]: "6"
+                              - generic [ref=f55e158]: 2–100
+                              - generic [ref=f55e161]: "100"
+                              - generic [ref=f55e164]: "4"
+                              - generic [ref=f55e167]: "8"
+                              - generic [ref=f55e170]: "55"
+                        - generic [ref=f55e173]:
+                          - generic [ref=f55e174]: "02"
+                          - generic [ref=f55e177]:
+                            - heading "Six features, one session cookie." [level=2] [ref=f55e178]
+                            - generic [ref=f55e179]:
+                              - generic [ref=f55e180]:
+                                - heading "Rooms by code" [level=3] [ref=f55e181]
+                                - paragraph [ref=f55e182]
+                              - generic [ref=f55e190]:
+                                - heading "Live chat" [level=3] [ref=f55e191]
+                                - paragraph [ref=f55e192]
+                              - generic [ref=f55e199]:
+                                - heading "Presence" [level=3] [ref=f55e200]
+                                - paragraph [ref=f55e201]
+                              - generic [ref=f55e207]:
+                                - heading "Friends" [level=3] [ref=f55e208]
+                                - paragraph [ref=f55e209]
+                              - generic [ref=f55e215]:
+                                - heading "Invitations" [level=3] [ref=f55e216]
+                                - paragraph [ref=f55e217]
+                              - generic [ref=f55e223]:
+                                - heading "Moderation" [level=3] [ref=f55e224]
+                                - paragraph [ref=f55e225]
+                        - generic [ref=f55e231]:
+                          - generic [ref=f55e232]: "03"
+                          - generic [ref=f55e235]:
+                            - heading "The path of one message." [level=2] [ref=f55e236]
+                            - paragraph [ref=f55e237]
+                            - generic [ref=f55e240]:
+                              - generic [ref=f55e241]: "1."
+                              - generic [ref=f55e248]: "2."
+                              - generic [ref=f55e255]: "3."
+                              - generic [ref=f55e262]: "4."
+                              - generic [ref=f55e268]: "5."
+                            - generic [ref=f55e275]:
+                              - list
+                        - generic [ref=f55e278]:
+                          - generic [ref=f55e279]: "04"
+                          - generic [ref=f55e282]:
+                            - heading "Your dashboard and what could come next." [level=2] [ref=f55e283]
+                            - generic [ref=f55e284]:
+                              - generic [ref=f55e286]:
+                                - heading "Friends" [level=5] [ref=f55e288]
+                                - generic [ref=f55e304]:
+                                  - heading "Invitations" [level=5] [ref=f55e305]
+                                  - generic [ref=f55e310]:
+                                    - button [ref=f55e311] [cursor=pointer]
+                                    - button [ref=f55e313] [cursor=pointer]
+                              - generic [ref=f55e317]:
+                                - heading [level=5] [ref=f55e318]
+                                - list [ref=f55e321]:
+                                  - listitem [ref=f55e322]
+                                  - listitem [ref=f55e327]
+                                  - listitem [ref=f55e332]
+                                  - listitem [ref=f55e337]
+                                  - listitem [ref=f55e342]
+                                  - listitem [ref=f55e348]
+                        - generic [ref=f55e353]:
+                          - generic [ref=f55e354]: "05"
+                          - heading "What it's built with." [level=2] [ref=f55e358]
+                        - generic [ref=f55e407]:
+                          - heading [level=2] [ref=f55e408]:
+                            - text: Create a room.
+                            - emphasis [ref=f55e409]: Share the code.
+                          - button [ref=f55e410] [cursor=pointer]
+                      - contentinfo [ref=f55e412]
+                  - paragraph [ref=f51e139]: sketch
+                  - generic [ref=f51e140]:
+                    - button "Expand the image" [ref=f51e141] [cursor=pointer]
+                    - button "Flip the card" [ref=f51e144] [cursor=pointer]:
+                      - generic [ref=f51e148]: Details
+                - generic [ref=f51e149]:
+                  - paragraph [ref=f51e150]: "project case studies: chapters, figures, margin notes"
+                  - heading "Case Study" [level=2] [ref=f51e151]
+                  - paragraph [ref=f51e152]: "The landing is a project write-up: idea, features, architecture, the app, stack."
+                  - generic [ref=f51e153]:
+                    - generic [ref=f51e154]:
+                      - generic "#e8f2f1" [ref=f51e155]
+                      - generic "#0f1f1e" [ref=f51e156]
+                      - generic "#d9481f" [ref=f51e157]
+                      - generic "#0b1716" [ref=f51e158]
+                      - generic "#141414" [ref=f51e159]
+                    - generic [ref=f51e160]: serif chapter heads
+                    - generic [ref=f51e161]: numbered figures
+                    - generic [ref=f51e162]: metadata table
+                  - paragraph [ref=f51e163]:
+                    - generic [ref=f51e164]: Risk
+                    - text: Reads like a portfolio piece more than an app; the app screens need a plainer register.
+                  - button "Build this" [ref=f51e165] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Case Study
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: Big serif title with a project metadata table; Fig. 1 is the demo room with notes and join-by-code beside it; then numbered chapters.
+                  - paragraph:
+                    - generic: The case
+                    - text: "My take: the clearest story for an interviewer reading top to bottom."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Reads like a portfolio piece more than an app; the app screens need a plainer register.
+                  - button "Build this"
+          - article [ref=f51e166]:
+            - generic [ref=f51e167]:
+              - generic [ref=f51e168]:
+                - generic [ref=f51e169]:
+                  - iframe [aria-hidden] [ref=f51e171]:
+                    - generic [ref=f56e1]:
+                      - banner [ref=f56e2]:
+                        - generic [ref=f56e3]:
+                          - navigation [ref=f56e7]:
+                            - link [ref=f56e8] [cursor=pointer]:
+                              - /url: "#features"
+                            - link [ref=f56e10] [cursor=pointer]:
+                              - /url: "#how"
+                            - link [ref=f56e12] [cursor=pointer]:
+                              - /url: "#app"
+                            - link [ref=f56e14] [cursor=pointer]:
+                              - /url: "#stack"
+                          - group "Theme" [ref=f56e16]:
+                            - button "Light theme" [pressed] [ref=f56e17] [cursor=pointer]
+                            - button "Dark theme" [ref=f56e21] [cursor=pointer]
+                            - button "Black theme" [ref=f56e24] [cursor=pointer]
+                          - button [ref=f56e27] [cursor=pointer]
+                          - button [ref=f56e29] [cursor=pointer]
+                      - main [ref=f56e31]:
+                        - generic [ref=f56e32]:
+                          - generic [ref=f56e38]: 82S0OT
+                          - generic [ref=f56e39]: ON ·
+                        - generic [ref=f56e40]:
+                          - generic [ref=f56e41]:
+                            - heading "Six characters page you into a live room." [level=1] [ref=f56e42]
+                            - paragraph [ref=f56e43]
+                            - generic [ref=f56e46]:
+                              - button [ref=f56e47] [cursor=pointer]
+                              - button [ref=f56e49] [cursor=pointer]
+                            - generic [ref=f56e51]:
+                              - textbox "Room code" [ref=f56e55]
+                              - button [ref=f56e62] [cursor=pointer]
+                            - generic [ref=f56e64]:
+                              - generic [ref=f56e65]: 2–100
+                              - generic [ref=f56e69]: "100"
+                              - generic [ref=f56e73]: "55"
+                          - generic [ref=f56e77]:
+                            - generic [ref=f56e86]:
+                              - list [ref=f56e87]:
+                                - listitem [ref=f56e88]:
+                                  - paragraph [ref=f56e94]
+                                  - button "Reply" [ref=f56e99] [cursor=pointer]
+                              - generic [ref=f56e101]:
+                                - heading [level=6] [ref=f56e102]
+                                - list [ref=f56e104]:
+                                  - listitem [ref=f56e105]
+                                  - listitem [ref=f56e110]
+                            - generic [ref=f56e117]:
+                              - textbox "Message" [ref=f56e118]:
+                                - /placeholder: Try sending a message (simulated)
+                              - button [ref=f56e119] [cursor=pointer]
+                        - generic [ref=f56e121]:
+                          - generic [ref=f56e122]:
+                            - heading "Everything in a room, paged live." [level=2] [ref=f56e126]
+                            - paragraph [ref=f56e127]
+                          - generic [ref=f56e130]:
+                            - generic [ref=f56e131]:
+                              - heading [level=3] [ref=f56e137]
+                              - paragraph [ref=f56e139]
+                            - generic [ref=f56e147]:
+                              - heading [level=3] [ref=f56e153]
+                              - paragraph [ref=f56e155]
+                            - generic [ref=f56e162]:
+                              - heading [level=3] [ref=f56e168]
+                              - paragraph [ref=f56e170]
+                            - generic [ref=f56e176]:
+                              - heading [level=3] [ref=f56e182]
+                              - paragraph [ref=f56e184]
+                            - generic [ref=f56e190]:
+                              - heading [level=3] [ref=f56e196]
+                              - paragraph [ref=f56e198]
+                            - generic [ref=f56e204]:
+                              - heading [level=3] [ref=f56e210]
+                              - paragraph [ref=f56e212]
+                        - generic [ref=f56e219]:
+                          - generic [ref=f56e220]:
+                            - heading "The path of one message." [level=2] [ref=f56e224]
+                            - paragraph [ref=f56e225]
+                          - generic [ref=f56e228]:
+                            - generic [ref=f56e229]: "01"
+                            - generic [ref=f56e236]: "02"
+                            - generic [ref=f56e243]: "03"
+                            - generic [ref=f56e250]: "04"
+                            - generic [ref=f56e257]: "05"
+                          - generic [ref=f56e264]:
+                            - list
+                        - generic [ref=f56e265]:
+                          - generic [ref=f56e266]:
+                            - heading "Your dashboard." [level=2] [ref=f56e270]
+                            - paragraph [ref=f56e271]
+                          - generic [ref=f56e274]:
+                            - generic [ref=f56e275]:
+                              - heading [level=4] [ref=f56e277]
+                              - generic [ref=f56e293]:
+                                - heading [level=4] [ref=f56e294]
+                                - generic [ref=f56e300]:
+                                  - button [ref=f56e301] [cursor=pointer]
+                                  - button [ref=f56e303] [cursor=pointer]
+                            - list [ref=f56e308]:
+                              - listitem [ref=f56e309]
+                              - listitem [ref=f56e314]
+                              - listitem [ref=f56e319]
+                              - listitem [ref=f56e324]
+                              - listitem [ref=f56e329]
+                              - listitem [ref=f56e334]
+                        - generic [ref=f56e340]:
+                          - heading "What it's built with." [level=2] [ref=f56e344]
+                          - paragraph [ref=f56e345]
+                        - generic [ref=f56e389]:
+                          - generic [ref=f56e390]: CREATE A ROOM
+                          - button [ref=f56e391] [cursor=pointer]
+                      - contentinfo [ref=f56e393]
+                  - paragraph [ref=f51e172]: sketch
+                  - generic [ref=f51e173]:
+                    - button "Expand the image" [ref=f51e174] [cursor=pointer]
+                    - button "Flip the card" [ref=f51e177] [cursor=pointer]:
+                      - generic [ref=f51e181]: Details
+                - generic [ref=f51e182]:
+                  - paragraph [ref=f51e183]: "1990s pagers: plastic shells, LCD readouts, rubber keys"
+                  - heading "The Pager" [level=2] [ref=f51e184]
+                  - paragraph [ref=f51e185]: "Every room code is a page: the big LCD readout mirrors the live room."
+                  - generic [ref=f51e186]:
+                    - generic [ref=f51e187]:
+                      - generic "#e3e7da" [ref=f51e188]
+                      - generic "#c3cfa8" [ref=f51e189]
+                      - generic "#ff6a1a" [ref=f51e190]
+                      - generic "#0c2523" [ref=f51e191]
+                      - generic "#232623" [ref=f51e192]
+                    - generic [ref=f51e193]: plastic shell panels
+                    - generic [ref=f51e194]: LCD readouts
+                    - generic [ref=f51e195]: rubber keys
+                  - paragraph [ref=f51e196]:
+                    - generic [ref=f51e197]: Risk
+                    - text: A strong theme; must stay readable on the app screens.
+                  - button "Build this" [ref=f51e198] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · The Pager
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: A wide LCD readout shows the code and the latest event; below, copy with rubber-key buttons and LCD code cells, and the demo room in a pager-shaped device. Features are 'pages'.
+                  - paragraph:
+                    - generic: The case
+                    - text: "Rebuilt as you asked. My take: the most distinctive; dark mode (backlight on) is the best of the three."
+                  - paragraph:
+                    - generic: Risk
+                    - text: A strong theme; must stay readable on the app screens.
+                  - button "Build this"
+          - article [ref=f51e199]:
+            - generic [ref=f51e200]:
+              - generic [ref=f51e201]:
+                - generic [ref=f51e202]:
+                  - iframe [aria-hidden] [ref=f51e204]:
+                    - generic [ref=f57e1]:
+                      - banner [ref=f57e2]:
+                        - generic [ref=f57e3]:
+                          - navigation [ref=f57e6]:
+                            - link [ref=f57e7] [cursor=pointer]:
+                              - /url: "#features"
+                            - link [ref=f57e9] [cursor=pointer]:
+                              - /url: "#how"
+                            - link [ref=f57e11] [cursor=pointer]:
+                              - /url: "#app"
+                            - link [ref=f57e13] [cursor=pointer]:
+                              - /url: "#stack"
+                          - group "Theme" [ref=f57e15]:
+                            - button "Light theme" [pressed] [ref=f57e16] [cursor=pointer]
+                            - button "Dark theme" [ref=f57e20] [cursor=pointer]
+                            - button "Black theme" [ref=f57e23] [cursor=pointer]
+                          - button [ref=f57e26] [cursor=pointer]
+                          - button [ref=f57e28] [cursor=pointer]
+                      - main [ref=f57e30]:
+                        - generic [ref=f57e31]:
+                          - generic [ref=f57e32]:
+                            - heading "Stick a code on it. That's your room." [level=1] [ref=f57e33]
+                            - paragraph [ref=f57e34]
+                            - generic [ref=f57e38]:
+                              - button [ref=f57e39] [cursor=pointer]
+                              - button [ref=f57e41] [cursor=pointer]
+                            - generic [ref=f57e43]: 82S0OT
+                            - generic [ref=f57e51]:
+                              - textbox "Room code" [ref=f57e53]
+                              - button [ref=f57e60] [cursor=pointer]
+                          - generic [ref=f57e62]:
+                            - generic [ref=f57e76]:
+                              - list [ref=f57e77]:
+                                - listitem [ref=f57e78]:
+                                  - paragraph [ref=f57e84]
+                                  - button "Reply" [ref=f57e88] [cursor=pointer]
+                              - generic [ref=f57e90]:
+                                - heading [level=6] [ref=f57e91]
+                                - list [ref=f57e93]:
+                                  - listitem [ref=f57e94]
+                                  - listitem [ref=f57e99]
+                            - generic [ref=f57e106]:
+                              - textbox "Message" [ref=f57e107]:
+                                - /placeholder: Try sending a message (simulated)
+                              - button [ref=f57e108] [cursor=pointer]
+                        - generic [ref=f57e110]:
+                          - generic [ref=f57e111]: "6"
+                          - generic [ref=f57e116]: 2–100
+                          - generic [ref=f57e121]: "100"
+                          - generic [ref=f57e126]: "4"
+                          - generic [ref=f57e131]: "8"
+                          - generic [ref=f57e136]: "55"
+                        - generic [ref=f57e141]:
+                          - generic [ref=f57e142]:
+                            - heading "Everything in a room, pushed live." [level=2] [ref=f57e143]: Everything in a room,pushed live.
+                            - paragraph [ref=f57e144]
+                          - generic [ref=f57e147]:
+                            - generic [ref=f57e148]:
+                              - heading [level=3] [ref=f57e151]
+                              - paragraph [ref=f57e153]
+                            - generic [ref=f57e162]:
+                              - heading [level=3] [ref=f57e165]
+                              - paragraph [ref=f57e167]
+                            - generic [ref=f57e174]:
+                              - heading [level=3] [ref=f57e177]
+                              - paragraph [ref=f57e179]
+                            - generic [ref=f57e185]:
+                              - heading [level=3] [ref=f57e188]
+                              - paragraph [ref=f57e190]
+                            - generic [ref=f57e196]:
+                              - heading [level=3] [ref=f57e199]
+                              - paragraph [ref=f57e201]
+                            - generic [ref=f57e207]:
+                              - heading [level=3] [ref=f57e210]
+                              - paragraph [ref=f57e212]
+                        - generic [ref=f57e219]:
+                          - generic [ref=f57e220]:
+                            - heading "The path of one message." [level=2] [ref=f57e221]
+                            - paragraph [ref=f57e222]
+                          - generic [ref=f57e224]:
+                            - generic [ref=f57e225]: "01"
+                            - generic [ref=f57e232]: "02"
+                            - generic [ref=f57e239]: "03"
+                            - generic [ref=f57e246]: "04"
+                            - generic [ref=f57e253]: "05"
+                          - generic [ref=f57e260]:
+                            - list
+                        - generic [ref=f57e261]:
+                          - generic [ref=f57e262]:
+                            - heading "Inside the app." [level=2] [ref=f57e263]
+                            - paragraph [ref=f57e264]
+                          - generic [ref=f57e267]:
+                            - generic [ref=f57e268]:
+                              - heading [level=4] [ref=f57e270]
+                              - generic [ref=f57e287]:
+                                - heading [level=4] [ref=f57e288]
+                                - generic [ref=f57e294]:
+                                  - button [ref=f57e295] [cursor=pointer]
+                                  - button [ref=f57e297] [cursor=pointer]
+                            - generic [ref=f57e299]:
+                              - heading [level=4] [ref=f57e300]
+                              - list [ref=f57e302]:
+                                - listitem [ref=f57e303]
+                                - listitem [ref=f57e308]
+                                - listitem [ref=f57e313]
+                                - listitem [ref=f57e318]
+                                - listitem [ref=f57e323]
+                                - listitem [ref=f57e328]
+                        - generic [ref=f57e334]:
+                          - heading "Stack." [level=2] [ref=f57e335]
+                          - paragraph [ref=f57e336]
+                        - generic [ref=f57e380]:
+                          - heading "Create a room. Share the code." [level=2] [ref=f57e381]
+                          - button [ref=f57e382] [cursor=pointer]
+                      - contentinfo [ref=f57e384]
+                  - paragraph [ref=f51e205]: sketch
+                  - generic [ref=f51e206]:
+                    - button "Expand the image" [ref=f51e207] [cursor=pointer]
+                    - button "Flip the card" [ref=f51e210] [cursor=pointer]:
+                      - generic [ref=f51e214]: Details
+                - generic [ref=f51e215]:
+                  - paragraph [ref=f51e216]: "Y2K-revival sticker sheets: holo foil, kiss-cut borders"
+                  - heading "Holo Sticker Sheet" [level=2] [ref=f51e217]
+                  - paragraph [ref=f51e218]: Codes and numbers are holographic stickers; everything else is clean white sheets.
+                  - generic [ref=f51e219]:
+                    - generic [ref=f51e220]:
+                      - generic "#eceffb" [ref=f51e221]
+                      - generic "#151730" [ref=f51e222]
+                      - generic "#ff3d7f" [ref=f51e223]
+                      - generic "#10112a" [ref=f51e224]
+                      - generic "#141414" [ref=f51e225]
+                    - generic [ref=f51e226]: backing grid
+                    - generic [ref=f51e227]: white sheets
+                    - generic [ref=f51e228]: holo foil (codes only)
+                  - paragraph [ref=f51e229]:
+                    - generic [ref=f51e230]: Risk
+                    - text: Holo foil is close to an overused gradient look; it is limited to codes and numbers.
+                  - button "Build this" [ref=f51e231] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Holo Sticker Sheet
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: A white intro sheet with a big foil code sticker beside the demo room sheet; six foil number stickers underneath. The foil shine follows your cursor.
+                  - paragraph:
+                    - generic: The case
+                    - text: "Rebuilt as you asked. My take: playful but tidy; the foil is a nice signature."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Holo foil is close to an overused gradient look; it is limited to codes and numbers.
+                  - button "Build this"
+          - article [ref=f51e232]:
+            - generic [ref=f51e233]:
+              - generic [ref=f51e234]:
+                - generic [ref=f51e235]:
+                  - iframe [aria-hidden] [ref=f51e237]:
+                    - generic [ref=f58e1]:
+                      - banner [ref=f58e2]:
+                        - generic [ref=f58e3]:
+                          - generic [ref=f58e4]: RoomChat
+                          - navigation [ref=f58e5]:
+                            - link [ref=f58e6] [cursor=pointer]:
+                              - /url: "#features"
+                            - link [ref=f58e8] [cursor=pointer]:
+                              - /url: "#how"
+                            - link [ref=f58e10] [cursor=pointer]:
+                              - /url: "#app"
+                            - link [ref=f58e12] [cursor=pointer]:
+                              - /url: "#stack"
+                          - group "Theme" [ref=f58e14]:
+                            - button "Light theme" [pressed] [ref=f58e15] [cursor=pointer]
+                            - button "Dark theme" [ref=f58e19] [cursor=pointer]
+                            - button "Black theme" [ref=f58e22] [cursor=pointer]
+                          - button [ref=f58e25] [cursor=pointer]
+                          - button [ref=f58e27] [cursor=pointer]
+                      - main [ref=f58e29]:
+                        - generic [ref=f58e82]:
+                          - generic [ref=f58e83]:
+                            - heading "Plug into a room by its code." [level=1] [ref=f58e84]
+                            - paragraph [ref=f58e85]
+                            - generic [ref=f58e89]:
+                              - button [ref=f58e90] [cursor=pointer]
+                              - button [ref=f58e92] [cursor=pointer]
+                            - generic [ref=f58e94]:
+                              - textbox "Room code" [ref=f58e98]
+                              - button [ref=f58e105] [cursor=pointer]
+                            - generic [ref=f58e107]:
+                              - generic [ref=f58e108]: 2–100
+                              - generic [ref=f58e111]: "100"
+                              - generic [ref=f58e114]: "55"
+                          - generic [ref=f58e117]:
+                            - generic [ref=f58e118]: Friday plans
+                            - generic [ref=f58e123]:
+                              - list [ref=f58e124]:
+                                - listitem [ref=f58e125]:
+                                  - paragraph [ref=f58e131]
+                                  - button "Reply" [ref=f58e135] [cursor=pointer]
+                              - generic [ref=f58e137]:
+                                - heading [level=6] [ref=f58e138]
+                                - list [ref=f58e142]:
+                                  - listitem [ref=f58e143]
+                                  - listitem [ref=f58e148]
+                            - generic [ref=f58e155]:
+                              - textbox "Message" [ref=f58e156]:
+                                - /placeholder: Try sending a message (simulated)
+                              - button [ref=f58e157] [cursor=pointer]
+                        - generic [ref=f58e159]:
+                          - generic [ref=f58e160]:
+                            - heading "Everything on the line, live." [level=2] [ref=f58e161]
+                            - paragraph [ref=f58e162]
+                          - generic [ref=f58e165]:
+                            - generic [ref=f58e166]:
+                              - heading "Rooms by code" [level=3] [ref=f58e171]
+                              - paragraph [ref=f58e172]
+                            - generic [ref=f58e180]:
+                              - heading "Live chat" [level=3] [ref=f58e185]
+                              - paragraph [ref=f58e186]
+                            - generic [ref=f58e193]:
+                              - heading "Presence" [level=3] [ref=f58e198]
+                              - paragraph [ref=f58e199]
+                            - generic [ref=f58e205]:
+                              - heading "Friends" [level=3] [ref=f58e210]
+                              - paragraph [ref=f58e211]
+                            - generic [ref=f58e217]:
+                              - heading "Invitations" [level=3] [ref=f58e222]
+                              - paragraph [ref=f58e223]
+                            - generic [ref=f58e229]:
+                              - heading "Moderation" [level=3] [ref=f58e234]
+                              - paragraph [ref=f58e235]
+                        - generic [ref=f58e241]:
+                          - generic [ref=f58e242]:
+                            - heading "The path of one message." [level=2] [ref=f58e243]
+                            - paragraph [ref=f58e244]
+                          - generic [ref=f58e283]:
+                            - list
+                        - generic [ref=f58e284]:
+                          - generic [ref=f58e285]:
+                            - heading "Inside the app." [level=2] [ref=f58e286]
+                            - paragraph [ref=f58e287]
+                          - generic [ref=f58e290]:
+                            - generic [ref=f58e291]:
+                              - heading [level=4] [ref=f58e293]
+                              - generic [ref=f58e310]:
+                                - heading [level=4] [ref=f58e311]
+                                - generic [ref=f58e317]:
+                                  - button [ref=f58e318] [cursor=pointer]
+                                  - button [ref=f58e320] [cursor=pointer]
+                            - generic [ref=f58e322]:
+                              - heading [level=4] [ref=f58e323]
+                              - list [ref=f58e325]:
+                                - listitem [ref=f58e326]
+                                - listitem [ref=f58e331]
+                                - listitem [ref=f58e336]
+                                - listitem [ref=f58e341]
+                                - listitem [ref=f58e346]
+                                - listitem [ref=f58e351]
+                        - generic [ref=f58e357]:
+                          - heading "Wiring." [level=2] [ref=f58e358]
+                          - paragraph [ref=f58e359]
+                        - generic [ref=f58e403]:
+                          - heading "Create a room. Share the code." [level=2] [ref=f58e404]
+                          - button [ref=f58e405] [cursor=pointer]
+                      - contentinfo [ref=f58e407]
+                  - paragraph [ref=f51e238]: sketch
+                  - generic [ref=f51e239]:
+                    - button "Expand the image" [ref=f51e240] [cursor=pointer]
+                    - button "Flip the card" [ref=f51e243] [cursor=pointer]:
+                      - generic [ref=f51e247]: Details
+                - generic [ref=f51e248]:
+                  - paragraph [ref=f51e249]: "operator switchboards: jacks, ivory labels, lamps"
+                  - heading "The Switchboard" [level=2] [ref=f51e250]
+                  - paragraph [ref=f51e251]: Rooms and members are jacks on a board; a lamp lights for each person connected.
+                  - generic [ref=f51e252]:
+                    - generic [ref=f51e253]:
+                      - generic "#ebe5d8" [ref=f51e254]
+                      - generic "#1a1613" [ref=f51e255]
+                      - generic "#b8893a" [ref=f51e256]
+                      - generic "#15100c" [ref=f51e257]
+                      - generic "#141414" [ref=f51e258]
+                    - generic [ref=f51e259]: bakelite board
+                    - generic [ref=f51e260]: brass rings
+                    - generic [ref=f51e261]: ivory labels
+                    - generic [ref=f51e262]: amber lamps
+                  - paragraph [ref=f51e263]:
+                    - generic [ref=f51e264]: Risk
+                    - text: Warm vintage look; close to a common cream-and-brass style.
+                  - button "Build this" [ref=f51e265] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · The Switchboard
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: A switchboard strip across the top whose lamps follow the demo's member list; condensed engraved headline; the demo room on a dark 'line' panel.
+                  - paragraph:
+                    - generic: The case
+                    - text: "Rebuilt as you asked. My take: the lamps-as-presence idea works well."
+                  - paragraph:
+                    - generic: Risk
+                    - text: Warm vintage look; close to a common cream-and-brass style.
+                  - button "Build this"
+          - article [ref=f51e266]:
+            - generic [ref=f51e267]:
+              - generic [ref=f51e268]:
+                - generic [ref=f51e269]: The standing door
+                - generic [ref=f51e270]:
+                  - iframe [aria-hidden] [ref=f51e272]:
+                    - generic [ref=f59e1]:
+                      - banner [ref=f59e2]:
+                        - generic [ref=f59e3]:
+                          - navigation [ref=f59e8]:
+                            - link [ref=f59e9] [cursor=pointer]:
+                              - /url: "#features"
+                            - link [ref=f59e11] [cursor=pointer]:
+                              - /url: "#how"
+                            - link [ref=f59e13] [cursor=pointer]:
+                              - /url: "#app"
+                            - link [ref=f59e15] [cursor=pointer]:
+                              - /url: "#stack"
+                          - group "Theme" [ref=f59e17]:
+                            - button "Light theme" [pressed] [ref=f59e18] [cursor=pointer]
+                            - button "Dark theme" [ref=f59e22] [cursor=pointer]
+                            - button "Black theme" [ref=f59e25] [cursor=pointer]
+                          - button [ref=f59e28] [cursor=pointer]
+                          - button [ref=f59e30] [cursor=pointer]
+                      - main [ref=f59e32]:
+                        - generic [ref=f59e33]:
+                          - generic [ref=f59e34]:
+                            - heading "Chat rooms you join with a six-character code." [level=1] [ref=f59e37]
+                            - paragraph [ref=f59e38]
+                            - generic [ref=f59e41]:
+                              - button [ref=f59e42] [cursor=pointer]
+                              - button [ref=f59e44] [cursor=pointer]
+                            - generic [ref=f59e46]:
+                              - textbox "Room code" [ref=f59e50]
+                              - button [ref=f59e57] [cursor=pointer]
+                          - generic [ref=f59e59]:
+                            - generic [ref=f59e72]:
+                              - list [ref=f59e73]:
+                                - listitem [ref=f59e74]:
+                                  - paragraph [ref=f59e80]
+                                  - button "Reply" [ref=f59e85] [cursor=pointer]
+                              - generic [ref=f59e87]:
+                                - heading [level=6] [ref=f59e88]
+                                - list [ref=f59e90]:
+                                  - listitem [ref=f59e91]
+                                  - listitem [ref=f59e96]
+                            - generic [ref=f59e101]:
+                              - textbox "Message" [ref=f59e102]:
+                                - /placeholder: Try sending a message
+                              - button [ref=f59e103] [cursor=pointer]
+                        - generic [ref=f59e105]:
+                          - generic [ref=f59e106]: "6"
+                          - generic [ref=f59e111]: 2–100
+                          - generic [ref=f59e115]: "100"
+                          - generic [ref=f59e119]: "4"
+                          - generic [ref=f59e123]: "8"
+                          - generic [ref=f59e127]: "55"
+                        - generic [ref=f59e131]:
+                          - generic [ref=f59e132]:
+                            - heading "Everything in a room, pushed live." [level=2] [ref=f59e135]
+                            - paragraph [ref=f59e136]
+                          - generic [ref=f59e139]:
+                            - generic [ref=f59e140]:
+                              - heading [level=3] [ref=f59e143]
+                              - paragraph [ref=f59e145]
+                            - generic [ref=f59e154]:
+                              - heading [level=3] [ref=f59e157]
+                              - paragraph [ref=f59e159]
+                            - generic [ref=f59e168]:
+                              - heading [level=3] [ref=f59e171]
+                              - paragraph [ref=f59e173]
+                            - generic [ref=f59e180]:
+                              - heading [level=3] [ref=f59e183]
+                              - paragraph [ref=f59e185]
+                            - generic [ref=f59e191]:
+                              - heading [level=3] [ref=f59e194]
+                              - paragraph [ref=f59e196]
+                            - generic [ref=f59e203]:
+                              - heading [level=3] [ref=f59e206]
+                              - paragraph [ref=f59e208]
+                        - generic [ref=f59e215]:
+                          - generic [ref=f59e216]:
+                            - heading "The path of one message." [level=2] [ref=f59e219]
+                            - paragraph [ref=f59e220]
+                          - generic [ref=f59e265]:
+                            - list
+                        - generic [ref=f59e266]:
+                          - generic [ref=f59e267]:
+                            - heading "Your dashboard, at a glance." [level=2] [ref=f59e270]
+                            - paragraph [ref=f59e271]
+                          - generic [ref=f59e273]:
+                            - generic [ref=f59e274]:
+                              - heading [level=4] [ref=f59e276]
+                              - generic [ref=f59e293]:
+                                - heading [level=4] [ref=f59e294]
+                                - generic [ref=f59e300]:
+                                  - button [ref=f59e301] [cursor=pointer]
+                                  - button [ref=f59e303] [cursor=pointer]
+                            - generic [ref=f59e305]:
+                              - heading [level=4] [ref=f59e306]
+                              - list [ref=f59e308]:
+                                - listitem [ref=f59e309]
+                                - listitem [ref=f59e314]
+                                - listitem [ref=f59e319]
+                                - listitem [ref=f59e324]
+                                - listitem [ref=f59e329]
+                                - listitem [ref=f59e334]
+                        - heading "What it's built with." [level=2] [ref=f59e343]
+                        - generic [ref=f59e386]:
+                          - heading "Create a room. Share the code." [level=2] [ref=f59e387]
+                          - button [ref=f59e388] [cursor=pointer]
+                      - contentinfo [ref=f59e390]
+                  - paragraph [ref=f51e273]: sketch
+                  - generic [ref=f51e274]:
+                    - button "Expand the image" [ref=f51e275] [cursor=pointer]
+                    - button "Flip the card" [ref=f51e278] [cursor=pointer]:
+                      - generic [ref=f51e282]: Details
+                - generic [ref=f51e283]:
+                  - heading "Modern standard" [level=2] [ref=f51e284]
+                  - paragraph [ref=f51e285]: A clean, polished chat-product page, rebuilt with full content.
+                  - generic [ref=f51e286]:
+                    - generic [ref=f51e287]:
+                      - generic "#edf3fb" [ref=f51e288]
+                      - generic "#0f172a" [ref=f51e289]
+                      - generic "#2b8cf0" [ref=f51e290]
+                      - generic "#0b1322" [ref=f51e291]
+                      - generic "#131313" [ref=f51e292]
+                    - generic [ref=f51e293]: rounded cards
+                    - generic [ref=f51e294]: soft shadows
+                    - generic [ref=f51e295]: sky-blue accent
+                  - paragraph [ref=f51e296]:
+                    - generic [ref=f51e297]: Risk
+                    - text: Looks like most chat products by design.
+                  - button "Play it straight" [ref=f51e298] [cursor=pointer]
+              - generic:
+                - generic:
+                  - paragraph: The full read · Modern standard
+                  - button "Flip the card":
+                    - generic: Front
+                - generic:
+                  - paragraph:
+                    - generic: First viewport
+                    - text: Headline and join-by-code on the left, a chat window running the demo on the right, stats and feature cards below.
+                  - paragraph:
+                    - generic: Risk
+                    - text: Looks like most chat products by design.
+                  - button "Play it straight"
+        - button "Previous card" [disabled] [ref=f51e299]
+        - button "Next card" [ref=f51e302] [cursor=pointer]
+  - contentinfo [ref=f51e305]:
+    - 'textbox "Optional steer: what should be different or kept?" [ref=f51e306]'
+    - button "← Safer hand" [ref=f51e307] [cursor=pointer]
+    - button "Re-roll" [ref=f51e309] [cursor=pointer]
+    - button "Bolder hand →" [ref=f51e318] [cursor=pointer]
