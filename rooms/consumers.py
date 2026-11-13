@@ -35,6 +35,7 @@ from .schemas import (
     WSActiveUsersUpdatedEvent,
     WSUserKickedEvent,
     WSUserKickedBroadcastEvent,
+    WSSessionReplacedEvent,
     WSOwnershipTransferredEvent,
     WSRoomDeletedEvent,
     WSRoomInfoEvent,
@@ -51,6 +52,7 @@ CLOSE_ROOM_FULL = 4001
 CLOSE_NOT_AUTHENTICATED = 4003
 CLOSE_ROOM_NOT_FOUND = 4004
 CLOSE_BANNED = 4005
+CLOSE_REPLACED = 4006
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -102,14 +104,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
+        # One socket per user per room: if this user is already here on another socket,
+        # close that one. This socket then takes over the presence row below.
+        old_channel = await self.get_member_channel(self.user.id)
+        if old_channel:
+            await self.channel_layer.send(
+                old_channel,
+                WSSessionReplacedEvent(message='You opened this room somewhere else.').model_dump(mode='json')
+            )
+
         # Create membership
         await self.create_membership()
 
-        # Notify room
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            WSUserJoinedEvent(username=self.user.username, user_id=self.user.id).model_dump(mode='json')
-        )
+        # Notify room (not on a takeover: the user never left)
+        if not old_channel:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                WSUserJoinedEvent(username=self.user.username, user_id=self.user.id).model_dump(mode='json')
+            )
 
         # Send updated active users list
         await self.send_active_users()
@@ -133,7 +145,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if getattr(self, '_rejected', False):
             return
 
-        if hasattr(self, 'user') and not self.user.is_anonymous and getattr(self, 'room', None):
+        # A replaced socket did not leave: the user's new socket owns the presence row
+        # now, so the leave steps are skipped and only the group is left below.
+        replaced = getattr(self, '_replaced', False)
+
+        if not replaced and hasattr(self, 'user') and not self.user.is_anonymous and getattr(self, 'room', None):
             # Remove membership
             await self.delete_membership()
 
@@ -363,6 +379,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event))
         await self.close(code=CLOSE_BANNED)
 
+    async def session_replaced(self, event):
+        """Sent directly to this user's old socket when they open the room on a new one."""
+        # Flag the close so disconnect() skips the leave steps.
+        self._replaced = True
+        await self.send(text_data=json.dumps(event))
+        await self.close(code=CLOSE_REPLACED)
+
     async def user_kicked_broadcast(self, event):
         await self.send(text_data=json.dumps(event))
 
@@ -456,7 +479,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def delete_membership(self):
         # .filter(...).delete() -> one DELETE statement.
-        db.execute(delete(RoomMembership).where(RoomMembership.user == self.user, RoomMembership.room == self.room))
+        # Only this socket's own row: a newer socket of the same user may have taken it over.
+        db.execute(delete(RoomMembership).where(
+            RoomMembership.user == self.user, RoomMembership.room == self.room,
+            RoomMembership.channel_name == self.channel_name,
+        ))
         db.commit()
 
     @database_sync_to_async

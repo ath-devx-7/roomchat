@@ -46,6 +46,10 @@ export default function ChatRoom() {
   // The member who joined a moment ago, so their row can flash once.
   const [justJoined, setJustJoined] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  // This room is already open in another tab or device: ask before the socket takes it over.
+  const [askSwitch, setAskSwitch] = useState(false);
+  // Another tab or device took this room over; the notice stays until it is answered.
+  const [replaced, setReplaced] = useState(false);
   // Search through the loaded history (browser-only: it never asks the server).
   const [query, setQuery] = useState("");
   const [matchIndex, setMatchIndex] = useState(0);
@@ -84,6 +88,7 @@ export default function ChatRoom() {
               : undefined,
           }))
         );
+        setAskSwitch(Boolean(data.open_elsewhere));
         setLoaded(true);
       } catch (err) {
         if (cancelled) return;
@@ -144,6 +149,8 @@ export default function ChatRoom() {
 
         case "active_users_updated":
           setMembers(data.users);
+          // A takeover or silent reconnect sends no join notice, so clear the first label here.
+          setActivity((a) => (a === "Connecting…" ? "Connected" : a));
           break;
 
         case "user_joined":
@@ -215,6 +222,12 @@ export default function ChatRoom() {
           leave(data.message, "warning", 1800);
           break;
 
+        case "session_replaced":
+          // The socket closes with 4006 right after this; the flag keeps onFatal quiet.
+          leavingRef.current = true;
+          setReplaced(true);
+          break;
+
         case "invite_sent":
           toast.success(data.message);
           break;
@@ -240,7 +253,7 @@ export default function ChatRoom() {
 
   // Only connect once the HTTP gate has admitted us, so a rejected room never opens a
   // socket that would immediately be closed with 4003.
-  const send = useSocket(loaded ? `/ws/chat/${code}/` : null, {
+  const send = useSocket(loaded && !askSwitch ? `/ws/chat/${code}/` : null, {
     onMessage: handleEvent,
     onFatal,
   });
@@ -647,6 +660,41 @@ export default function ChatRoom() {
           </ul>
         </aside>
       </div>
+
+      {/* Second tab: connecting here closes the room in the other tab, so ask first. */}
+      <AlertDialog open={askSwitch}>
+        <AlertDialogContent data-testid="switch-tab-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>This room is already open</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have “{room.name}” open in another tab or device. Switch to this one? The other will be disconnected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => leave(null, "error", 0)} data-testid="keep-other-tab-button">
+              Keep the other one
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => setAskSwitch(false)} data-testid="switch-to-this-tab-button">
+              Switch to this tab
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* First tab: the room was taken over elsewhere. Stays until answered (button or Esc). */}
+      <AlertDialog open={replaced} onOpenChange={(open) => !open && navigate("/dashboard", { replace: true })}>
+        <AlertDialogContent data-testid="replaced-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Opened somewhere else</AlertDialogTitle>
+            <AlertDialogDescription>
+              You opened “{room.name}” in another tab or device, so this one was disconnected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction data-testid="replaced-back-button">Back to dashboard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

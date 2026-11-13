@@ -41,7 +41,9 @@ from starlette.testclient import TestClient  # noqa: E402
 from accounts.models import Friendship  # noqa: E402
 from accounts.schemas import UserCreate  # noqa: E402
 from rooms import services  # noqa: E402
-from rooms.consumers import CLOSE_BANNED, CLOSE_NOT_AUTHENTICATED, ChatConsumer  # noqa: E402
+from rooms.consumers import (  # noqa: E402
+    CLOSE_BANNED, CLOSE_NOT_AUTHENTICATED, CLOSE_REPLACED, ChatConsumer,
+)
 from rooms.models import Message, Room, RoomBan, RoomInvitation, RoomMembership  # noqa: E402
 from rooms.routing import websocket_urlpatterns  # noqa: E402
 from rooms.schemas import RoomCreate, WSFriendRequestReceivedEvent  # noqa: E402
@@ -629,6 +631,82 @@ class ChatConsumerPasswordGateTests:
         create(RoomBan, room=self.room, user=self.other, banned_by=self.owner)
         session = {'room_grant': self.room.room_code}
         await self._assert_rejected(self._communicator(self.other, session), CLOSE_BANNED)
+
+
+class ChatConsumerOneSocketTests:
+    """One socket per user per room: a second socket of the same user closes the first
+    and takes over its presence row."""
+
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        """Create the owner, another user, and an open room."""
+        self.owner = create_user('owner', password='x')
+        self.other = create_user('other', password='x')
+        self.room = create(Room, name='Open', owner=self.owner)
+
+    async def _connect(self, user):
+        communicator = WebsocketCommunicator(
+            Router(websocket_urlpatterns),
+            f'/ws/chat/{self.room.room_code}/',
+        )
+        communicator.scope['user'] = user
+        communicator.scope['session'] = {}
+        connected, _ = await communicator.connect()
+        assert connected
+        return communicator
+
+    async def _receive_until(self, communicator, event_type):
+        """Read frames until one of the given type arrives, and return it."""
+        while True:
+            frame = await communicator.receive_json_from()
+            if frame['type'] == event_type:
+                return frame
+
+    async def _assert_closed(self, communicator, code):
+        close = await communicator.receive_output()
+        assert close['type'] == 'websocket.close'
+        assert close['code'] == code
+
+    def _member_rows(self, user):
+        return db.scalars(select(RoomMembership).where(
+            RoomMembership.room_id == self.room.id, RoomMembership.user_id == user.id,
+        )).all()
+
+    async def test_second_socket_replaces_the_first(self):
+        first = await self._connect(self.other)
+        await self._receive_until(first, 'room_info')
+        second = await self._connect(self.other)
+
+        await self._receive_until(first, 'session_replaced')
+        await self._assert_closed(first, CLOSE_REPLACED)
+        # The room sees the user once, and the first socket leaving changes nothing.
+        users = await self._receive_until(second, 'active_users_updated')
+        assert [u['user_id'] for u in users['users']] == [self.other.id]
+        await first.disconnect()
+        assert len(self._member_rows(self.other)) == 1
+
+        await second.disconnect()
+        assert not self._member_rows(self.other)
+
+    async def test_kick_leaves_no_socket_of_the_user_open(self):
+        owner = await self._connect(self.owner)
+        first = await self._connect(self.other)
+        # Wait for the first socket's presence row before opening the second.
+        await self._receive_until(first, 'room_info')
+        second = await self._connect(self.other)
+        await self._receive_until(first, 'session_replaced')
+        await self._assert_closed(first, CLOSE_REPLACED)
+        # The second socket owns the presence row once its room_info has arrived.
+        await self._receive_until(second, 'room_info')
+
+        await owner.send_json_to({'type': 'kick_user', 'user_id': self.other.id})
+        await self._receive_until(second, 'user_kicked')
+        await self._assert_closed(second, CLOSE_BANNED)
+        assert not self._member_rows(self.other)
+
+        await first.disconnect()
+        await second.disconnect()
+        await owner.disconnect()
 
 
 class RoomBanTests:

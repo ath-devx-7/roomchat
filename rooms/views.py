@@ -254,6 +254,10 @@ def room_detail_api(request: Request, room_code: str):
             is_protected=bool(room.password),
         ),
         is_owner=is_owner,
+        # A presence row means one of this user's sockets is already in the room.
+        open_elsewhere=db.scalar(select(exists().where(
+            RoomMembership.room == room, RoomMembership.user == request.user
+        ))),
         messages=[
             MessageResponse(
                 message_id=m.id,

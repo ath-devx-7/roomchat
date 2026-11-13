@@ -137,6 +137,9 @@ class MessageResponse(BaseModel):
 class RoomDetailResponse(BaseModel):
     room: RoomSummaryResponse
     is_owner: bool
+    # True when this user already has a presence row here (the room is open in another
+    # tab or device), so the SPA can ask before its socket takes over.
+    open_elsewhere: bool = False
     messages: List[MessageResponse]
 
 
@@ -312,6 +315,12 @@ class WSActiveUsersUpdatedEvent(BaseModel):
 
 class WSUserKickedEvent(BaseModel):
     type: Literal['user_kicked'] = 'user_kicked'
+    message: str
+
+
+class WSSessionReplacedEvent(BaseModel):
+    """Sent to a user's old socket when they open the same room on a new one."""
+    type: Literal['session_replaced'] = 'session_replaced'
     message: str
 
 

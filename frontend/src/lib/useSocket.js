@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef } from "react";
 
 /**
  * Application close codes. These MUST stay in sync with rooms/consumers.py
- * (CLOSE_ROOM_FULL / CLOSE_NOT_AUTHENTICATED / CLOSE_ROOM_NOT_FOUND / CLOSE_BANNED).
+ * (CLOSE_ROOM_FULL / CLOSE_NOT_AUTHENTICATED / CLOSE_ROOM_NOT_FOUND / CLOSE_BANNED /
+ * CLOSE_REPLACED).
  *
  * ChatConsumer.reject() accepts the handshake *before* closing with one of these,
  * specifically so the browser reports the real code instead of the 1006 it gives for
@@ -14,6 +15,7 @@ export const FATAL_CLOSE_CODES = {
   4003: "You must be signed in to join a room.",
   4004: "This room no longer exists.",
   4005: "You have been removed from this room.",
+  4006: "You opened this room somewhere else.",
 };
 
 const RECONNECT_DELAY_MS = 3000;
