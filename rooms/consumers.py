@@ -172,8 +172,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if hasattr(self, 'room_group_name'):
             await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None):
         """Route incoming WebSocket messages to appropriate handlers."""
+        if text_data is None:
+            # A binary frame: this protocol is JSON text only.
+            await self.send(text_data=WSErrorEvent(message='Binary messages are not supported.').model_dump_json())
+            return
         try:
             msg = TypeAdapter(WSIncomingMessage).validate_json(text_data)
         except ValidationError as e:
@@ -480,6 +484,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def delete_membership(self):
         # .filter(...).delete() -> one DELETE statement.
         # Only this socket's own row: a newer socket of the same user may have taken it over.
+        # After a crashed write these are expired; merging lets them reload (rule 5).
+        self.room = db.merge(self.room, load=False)
+        self.user = db.merge(self.user, load=False)
         db.execute(delete(RoomMembership).where(
             RoomMembership.user == self.user, RoomMembership.room == self.room,
             RoomMembership.channel_name == self.channel_name,
@@ -709,7 +716,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if hasattr(self, 'user_group'):
             await self.channel_layer.group_discard(self.user_group, self.channel_name)
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None):
+        if text_data is None:
+            # A binary frame: this protocol is JSON text only.
+            await self.send(text_data=WSErrorEvent(message='Binary messages are not supported.').model_dump_json())
+            return
         try:
             msg = _NotificationAdapter.validate_json(text_data)
         except ValidationError as e:

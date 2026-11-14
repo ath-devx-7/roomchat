@@ -172,6 +172,23 @@ class DashboardResponse(BaseModel):
 class WSBaseMessage(BaseModel):
     type: str
 
+    # check_fields=False: these fields only exist on some of the subclasses.
+    @field_validator('user_id', check_fields=False)
+    @classmethod
+    def validate_user_id(cls, v: int) -> int:
+        """Refuse a user id that cannot fit auth_user.id (a 32-bit column)."""
+        if not 0 < v <= 2**31 - 1:
+            raise ValueError("Invalid id.")
+        return v
+
+    @field_validator('message_id', 'reply_to_id', 'invitation_id', check_fields=False)
+    @classmethod
+    def validate_row_id(cls, v: int) -> int:
+        """Refuse a message or invitation id that cannot fit its 64-bit column."""
+        if not 0 < v <= 2**63 - 1:
+            raise ValueError("Invalid id.")
+        return v
+
 
 class WSSendMessage(WSBaseMessage):
     type: Literal['send_message']
@@ -183,6 +200,9 @@ class WSSendMessage(WSBaseMessage):
         v = v.strip()
         if not v:
             raise ValueError("Message content cannot be empty.")
+        if '\x00' in v:
+            # Postgres text columns cannot store the NUL character.
+            raise ValueError("Message contains an invalid character.")
         return v
 
 
@@ -197,6 +217,9 @@ class WSEditMessage(WSBaseMessage):
         v = v.strip()
         if not v:
             raise ValueError("Edited content cannot be empty.")
+        if '\x00' in v:
+            # Postgres text columns cannot store the NUL character.
+            raise ValueError("Message contains an invalid character.")
         return v
 
 
@@ -216,6 +239,9 @@ class WSReplyMessage(WSBaseMessage):
         v = v.strip()
         if not v:
             raise ValueError("Reply content cannot be empty.")
+        if '\x00' in v:
+            # Postgres text columns cannot store the NUL character.
+            raise ValueError("Message contains an invalid character.")
         return v
 
 

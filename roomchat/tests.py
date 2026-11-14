@@ -34,6 +34,7 @@ from alembic.config import Config as AlembicConfig  # noqa: E402
 from asgiref.testing import ApplicationCommunicator  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 from sqlalchemy import create_engine, exists, select, text  # noqa: E402
+from sqlalchemy.exc import DBAPIError  # noqa: E402
 from starlette.requests import Request  # noqa: E402
 from starlette.routing import Router  # noqa: E402
 from starlette.testclient import TestClient  # noqa: E402
@@ -707,6 +708,88 @@ class ChatConsumerOneSocketTests:
         await first.disconnect()
         await second.disconnect()
         await owner.disconnect()
+
+
+class ConsumerBadFrameTests:
+    """A frame the server cannot use gets an `error` frame, and a handler that still crashes
+    leaves no presence row behind (audit finding H1)."""
+
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        """Create the owner, another user, and an open room."""
+        self.owner = create_user('owner', password='x')
+        self.other = create_user('other', password='x')
+        self.room = create(Room, name='Open', owner=self.owner)
+
+    async def _connect(self, user, path=None):
+        communicator = WebsocketCommunicator(
+            Router(websocket_urlpatterns), path or f'/ws/chat/{self.room.room_code}/',
+        )
+        communicator.scope['user'] = user
+        communicator.scope['session'] = {}
+        connected, _ = await communicator.connect()
+        assert connected
+        return communicator
+
+    async def _receive_until(self, communicator, event_type):
+        """Read frames until one of the given type arrives, and return it."""
+        while True:
+            frame = await communicator.receive_json_from()
+            if frame['type'] == event_type:
+                return frame
+
+    async def test_bad_frames_get_an_error_and_the_socket_stays_open(self):
+        socket = await self._connect(self.owner)
+        await socket.send_input({'type': 'websocket.receive', 'bytes': b'x'})
+        error = await self._receive_until(socket, 'error')
+        assert error['message'] == 'Binary messages are not supported.'
+
+        bad_frames = [
+            ({'type': 'send_message', 'content': 'a\x00b'}, 'Message contains an invalid character.'),
+            ({'type': 'delete_message', 'message_id': 10**30}, 'Invalid id.'),
+            ({'type': 'delete_message', 'message_id': -10**30}, 'Invalid id.'),
+            ({'type': 'send_room_invite', 'user_id': 10**30}, 'Invalid id.'),
+        ]
+        for frame, message in bad_frames:
+            await socket.send_json_to(frame)
+            error = await self._receive_until(socket, 'error')
+            assert error['message'] == message
+
+        # The socket survived all of them: a normal message still goes through.
+        await socket.send_json_to({'type': 'send_message', 'content': 'hello'})
+        await self._receive_until(socket, 'message_created')
+        await socket.disconnect()
+
+    async def test_crash_in_a_handler_still_removes_the_presence_row(self, monkeypatch):
+        async def crash(self, msg):
+            # A write Postgres refuses (NUL byte), reached without the schema check. The failed
+            # write rolls back and leaves self.user / self.room expired, the hard case.
+            await self.save_message('a\x00b')
+        monkeypatch.setattr(ChatConsumer, 'handle_send_message', crash)
+
+        owner = await self._connect(self.owner)
+        other = await self._connect(self.other)
+        await self._receive_until(other, 'room_info')
+
+        await other.send_json_to({'type': 'send_message', 'content': 'hello'})
+        # The consumer ends with the handler's exception, but only after it has left the room.
+        with pytest.raises(DBAPIError):
+            await other.wait()
+        left = await self._receive_until(owner, 'user_left')
+        assert left['user_id'] == self.other.id
+        assert not db.scalars(select(RoomMembership).where(RoomMembership.user_id == self.other.id)).all()
+        await owner.disconnect()
+
+    async def test_notification_socket_survives_bad_frames(self):
+        socket = await self._connect(self.owner, '/ws/notifications/')
+        await socket.send_input({'type': 'websocket.receive', 'bytes': b'x'})
+        error = await self._receive_until(socket, 'error')
+        assert error['message'] == 'Binary messages are not supported.'
+
+        await socket.send_json_to({'type': 'reject_room_invite', 'invitation_id': 10**30})
+        error = await self._receive_until(socket, 'error')
+        assert error['message'] == 'Invalid id.'
+        await socket.disconnect()
 
 
 class RoomBanTests:

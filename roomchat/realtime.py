@@ -402,6 +402,12 @@ class AsyncWebsocketConsumer:
                         waits[i] = asyncio.ensure_future(sources[i]())
         except StopConsumer:
             pass
+        except Exception:
+            # Crash safety net: a handler raised, so websocket_disconnect will never arrive.
+            # Run disconnect() here (once), so the consumer still leaves its room and groups.
+            if not getattr(self, '_disconnect_called', False):
+                await self.disconnect(1011)
+            raise
         finally:
             # Cleanup on disconnect (or crash): stop both pending waits, then drop this
             # socket's queue and channel subscription. Groups are not touched here; the
@@ -437,6 +443,7 @@ class AsyncWebsocketConsumer:
 
     async def websocket_disconnect(self, message):
         """The socket closed: run disconnect(), then stop the loop."""
+        self._disconnect_called = True
         await self.disconnect(message['code'])
         raise StopConsumer()
 
