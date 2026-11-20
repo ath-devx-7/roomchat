@@ -150,6 +150,7 @@ def authenticate(request=None, username=None, password=None):
         return None
 
     user = db.scalars(select(User).where(User.username == username)).one_or_none()
+    db.commit()  # hand the connection back before the slow hash below (audit finding H3)
     if user is None:
         # Hash anyway, so "no such user" takes as long as "wrong password" and response
         # time can't reveal which usernames exist.

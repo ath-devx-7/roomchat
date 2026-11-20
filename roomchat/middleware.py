@@ -12,6 +12,7 @@ from functools import wraps
 from http.cookies import SimpleCookie
 from urllib.parse import urlsplit
 
+from anyio import CapacityLimiter, to_thread
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers, MutableHeaders
@@ -41,18 +42,32 @@ SECURITY_HEADERS = {
     'Cross-Origin-Opener-Policy': 'same-origin',  # other sites' popups can't reach our window
 }
 
+# Own thread line for the end-of-request steps (session save, db.remove). They hold the
+# request's connection, so they must never wait behind new requests (audit finding H3).
+_finish_limiter = CapacityLimiter(10)
+
 
 # --- small helpers --------------------------------------------------------------------
 
 async def run_db(scope, func):
     """Run a blocking DB function on a worker thread, so the event loop isn't frozen.
 
-    HTTP reuses the request's `db` opened by DBSessionMiddleware. A WebSocket gets its own
-    short scope that closes straight away, so no connection is held while the socket is open.
+    HTTP reuses the request's `db` opened by DBSessionMiddleware, and hands its connection
+    back afterwards. A WebSocket gets its own short scope that closes straight away, so no
+    connection is held while the socket is open.
     """
     if scope['type'] == 'websocket':
         return await run_in_threadpool(_in_own_db_scope, func)
-    return await run_in_threadpool(func)
+    return await run_in_threadpool(_then_release, func)
+
+
+def _then_release(func):
+    """Call `func`, then end the transaction so the connection goes back to the pool while
+    the request waits for its next thread (audit finding H3)."""
+    result = func()
+    # commit, not rollback/close: with expire_on_commit=False the loaded user stays usable.
+    db.commit()
+    return result
 
 
 def _in_own_db_scope(func):
@@ -193,7 +208,8 @@ class DBSessionMiddleware:
         try:
             await self.app(scope, receive, send)
         finally:
-            await run_in_threadpool(db.remove)  # rolls back anything uncommitted, frees the connection
+            # Rolls back anything uncommitted and frees the connection, on its own thread line.
+            await to_thread.run_sync(db.remove, limiter=_finish_limiter)
             db_scope.reset(token)
 
 
@@ -243,7 +259,7 @@ class SessionMiddleware:
             headers.add_vary_header('Cookie')
         # Skip saving on a 5xx: the request crashed, so its changes may be half-done.
         if session.modified and not session.is_empty() and message['status'] < 500:
-            await run_db(scope, session.save)
+            await to_thread.run_sync(session.save, limiter=_finish_limiter)  # after the view: own line
             headers.append('Set-Cookie', cookie_header(
                 SESSION_COOKIE_NAME, session.session_key, SESSION_COOKIE_AGE,
                 http_only=True, secure=settings.SESSION_COOKIE_SECURE,

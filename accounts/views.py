@@ -71,6 +71,7 @@ def register_api(request: Request, form=Depends(form_data)):
         return JsonResponse(
             {'errors': {'username': 'A user with that username already exists.'}}, status=400
         )
+    db.commit()  # hand the connection back before create_user's slow hash (audit finding H3)
 
     user = create_user(
         username=user_data.username,
