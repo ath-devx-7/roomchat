@@ -139,6 +139,16 @@ def _db_scope():
             conn.execute(text(f'TRUNCATE {tables} RESTART IDENTITY CASCADE'))
 
 
+@pytest.fixture(autouse=True)
+def _clear_rate_limits():
+    """Start every test with empty rate-limit counters (audit finding H5). They live in Redis,
+    so without this they would carry over between tests and between runs."""
+    client = redis.Redis.from_url(settings.REDIS_URL)
+    for key in client.scan_iter('ratelimit:*'):
+        client.delete(key)
+    client.close()
+
+
 class RoomChatClient(TestClient):
     """TestClient that behaves like the SPA's api.js, plus Django's client.session and
     client.force_login.
@@ -1070,6 +1080,21 @@ class ApiAuthTests:
         assert response.status_code == 400
         assert response.json()['error'] == 'Invalid username or password.'
         assert 'errors' not in response.json()
+
+    def test_login_is_rate_limited(self):
+        """Audit finding H5: after 10 tries in a minute, even the right password gets 429."""
+        create_user('someone', password='hunter22')
+        for _ in range(10):
+            response = self.client.post('/api/auth/login/', data={
+                'username': 'someone', 'password': 'wrong',
+            })
+            assert response.status_code == 400
+
+        response = self.client.post('/api/auth/login/', data={
+            'username': 'someone', 'password': 'hunter22',
+        })
+        assert response.status_code == 429
+        assert response.json()['error'] == 'Too many attempts. Please wait a minute and try again.'
 
     def test_logout_rejects_get(self):
         # A GET logout is reachable by a link prefetch or a stray <a href>.

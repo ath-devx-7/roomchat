@@ -1,11 +1,16 @@
 """Shared helpers for API views: pydantic error formatting, JSON-safe auth, and the
 JSON error handlers that keep every error in the `{"error": ...}` shape."""
 
+import secrets
+import time
 from functools import wraps
 
+import redis
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+
+from roomchat import settings
 
 
 class JsonResponse(JSONResponse):
@@ -48,6 +53,24 @@ def require_POST_json(view_func):
             return JsonResponse({'error': 'Method not allowed.'}, status=405)
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+# Rate limit (audit finding H5): at most RATE_LIMIT tries per key in any RATE_WINDOW seconds.
+RATE_LIMIT = 10
+RATE_WINDOW = 60
+_redis = redis.Redis.from_url(settings.REDIS_URL)  # sync client; connects on first use
+
+
+def too_many_tries(key):
+    """Record one try for `key`. True once it has more than RATE_LIMIT in the last RATE_WINDOW seconds."""
+    now = time.time()
+    key = f'ratelimit:{key}'
+    pipe = _redis.pipeline()  # the 4 commands run as one transaction, so threads can't interleave
+    pipe.zremrangebyscore(key, 0, now - RATE_WINDOW)  # forget tries older than the window
+    pipe.zadd(key, {f'{now}:{secrets.token_hex(4)}': now})  # this try; the random part keeps entries unique
+    pipe.zcard(key)  # tries in the window, this one included
+    pipe.expire(key, RATE_WINDOW)  # an idle key deletes itself
+    return pipe.execute()[2] > RATE_LIMIT
 
 
 def format_pydantic_errors(exc: ValidationError) -> dict[str, str]:

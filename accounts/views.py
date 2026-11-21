@@ -7,6 +7,7 @@ from roomchat.auth import authenticate, create_user, login, logout
 from roomchat.db import db
 from roomchat.errors import (
     JsonResponse, api_login_required, form_data, format_pydantic_errors, require_POST_json,
+    too_many_tries,
 )
 from roomchat.middleware import json_validation_errors
 
@@ -64,6 +65,10 @@ def register_api(request: Request, form=Depends(form_data)):
     except ValidationError as e:
         return JsonResponse({'errors': format_pydantic_errors(e)}, status=400)
 
+    # Rate limit per client IP (audit finding H5), checked before create_user's slow hash.
+    if too_many_tries(f'signup-ip:{request.client.host}'):
+        return JsonResponse({'error': 'Too many attempts. Please wait a minute and try again.'}, status=429)
+
     # Keyed under 'username' so the SPA can pin the message to that field, matching
     # how format_pydantic_errors reports every other registration failure.
     # SELECT EXISTS(... WHERE username = ?) — True/False without loading the row.
@@ -95,6 +100,12 @@ def login_api(request: Request, form=Depends(form_data)):
         )
     except ValidationError as e:
         return JsonResponse({'errors': format_pydantic_errors(e)}, status=400)
+
+    # Rate limit per IP and per username (audit finding H5), checked before authenticate()'s
+    # slow hash. AdminAuth.login uses the same two keys, so both logins share the counters.
+    if (too_many_tries(f'login-ip:{request.client.host}')
+            or too_many_tries(f'login-user:{login_data.username}')):
+        return JsonResponse({'error': 'Too many attempts. Please wait a minute and try again.'}, status=429)
 
     user = authenticate(request, username=login_data.username, password=login_data.password)
     if user is None:

@@ -8,6 +8,7 @@ from roomchat import settings
 from roomchat.db import db
 from roomchat.errors import (
     JsonResponse, api_login_required, form_data, format_pydantic_errors, require_POST_json,
+    too_many_tries,
 )
 from roomchat.middleware import ensure_csrf_cookie, json_validation_errors
 from roomchat.staticfiles import static
@@ -160,6 +161,10 @@ def create_room(request: Request, form=Depends(form_data)):
 @require_POST_json
 def join_room(request: Request, form=Depends(form_data)):
     """Verify a room code and optional password, then unlock the room for this session."""
+    # Rate limit per user (audit finding H5), before RoomJoin loads the room and checks its password.
+    if too_many_tries(f'join-user:{request.user.id}'):
+        return JsonResponse({'error': 'Too many attempts. Please wait a minute and try again.'}, status=429)
+
     try:
         join_data = RoomJoin(
             room_code=form.get('room_code', ''),

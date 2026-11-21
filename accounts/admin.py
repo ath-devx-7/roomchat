@@ -15,6 +15,7 @@ from wtforms import SelectField
 
 from roomchat import auth
 from roomchat.db import db
+from roomchat.errors import too_many_tries
 
 from .models import Friendship, User
 
@@ -33,6 +34,11 @@ class AdminAuth(AuthenticationBackend):
     async def login(self, request):
         """Check the login form. Only active staff users get in."""
         form = await request.form()
+        # Same counters as the SPA's login_api (audit finding H5). sqladmin can only show
+        # "Invalid credentials." here, so a refused try looks like a wrong password.
+        if (too_many_tries(f'login-ip:{request.client.host}')
+                or too_many_tries(f'login-user:{form.get("username")}')):
+            return False
         user = await run_in_threadpool(
             auth.authenticate, request,
             username=form.get('username'), password=form.get('password'),
